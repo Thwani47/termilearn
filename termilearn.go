@@ -2,52 +2,55 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type model struct {
-	choices  []string
-	cursor   int
-	selected map[int]struct{}
+	status int
+	err    error
 }
 
-func initModel() model {
-	return model{
-		choices:  []string{"A", "B", "C"},
-		cursor:   0,
-		selected: make(map[int]struct{}),
+const url = "https://charm.sh"
+
+func checkServer() tea.Msg {
+	c := &http.Client{Timeout: 10 * time.Second}
+	res, err := c.Get(url)
+
+	if err != nil {
+		return errMsg{err}
 	}
 
+	return statusMessage(res.StatusCode)
+}
+
+type statusMessage int
+
+type errMsg struct{ err error }
+
+func (e errMsg) Error() string {
+	return e.err.Error()
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return checkServer
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
-			}
-		case "enter", " ":
-			_, ok := m.selected[m.cursor]
+	case statusMessage:
+		m.status = int(msg)
+		return m, tea.Quit
+	case errMsg:
+		m.err = msg.err
+		return m, tea.Quit
 
-			if ok {
-				delete(m.selected, m.cursor)
-			} else {
-				m.selected[m.cursor] = struct{}{}
-			}
+	case tea.KeyMsg:
+		if msg.Type == tea.KeyCtrlC {
+			return m, tea.Quit
 		}
 	}
 
@@ -55,29 +58,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	s := "Select some option(s)\n\n"
-
-	for i, choice := range m.choices {
-		cursor := " "
-		if m.cursor == i {
-			cursor = ">"
-		}
-
-		checked := " "
-		if _, ok := m.selected[i]; ok {
-			checked = "x"
-		}
-
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+	if m.err != nil {
+		return fmt.Sprintf("\nWe had some trouble: %v\n\n", m.err)
 	}
 
-	s += "\nPress q to quit.\n"
-	return s
+	s := fmt.Sprintf("checking %s....\n\n", url)
+
+	if m.status > 0 {
+		s += fmt.Sprintf("%d %s!\n\n", m.status, http.StatusText(m.status))
+	}
+
+	return "\n" + s + "\n"
 }
 
 func main() {
-	if _, err := tea.NewProgram(initModel()).Run(); err != nil {
-		fmt.Println("Error running program:", err)
+	if _, err := tea.NewProgram(model{}).Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
