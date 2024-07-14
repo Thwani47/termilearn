@@ -3,12 +3,19 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type model struct {
-	title string
+	title     string
+	err       error
+	altScreen bool
+}
+
+type editorFinishedMsg struct {
+	err error
 }
 
 func InitModel() model {
@@ -21,11 +28,32 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
+func openEditor() tea.Cmd {
+	editor := "vim" // this should be configurable (vim, nano)
+	file := "helloworld.go"
+
+	c := exec.Command(editor, file)
+
+	return tea.ExecProcess(c, func(err error) tea.Msg {
+		return editorFinishedMsg{err}
+	})
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
+		switch msg.String() {
+		case "a":
+			m.altScreen = !m.altScreen
+			cmd := tea.EnterAltScreen
+			if !m.altScreen {
+				cmd = tea.ExitAltScreen
+			}
+
+			return m, cmd
+		case "e":
+			return m, openEditor()
+		case "ctrl+c", "q":
 			return m, tea.Quit
 		}
 	}
@@ -33,6 +61,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+	if m.err != nil {
+		return "Error: " + m.err.Error() + "\n"
+	}
+
 	return m.title
 }
 
