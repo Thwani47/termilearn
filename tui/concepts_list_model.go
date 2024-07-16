@@ -86,9 +86,10 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.list.FilterState() == list.Filtering {
 			break
 		}
-		switch msg.String() {
-		case "q", "ctrl+c":
+		if IsQuitting(msg) {
 			return m, tea.Quit
+		}
+		switch msg.String() {
 		case "enter":
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {

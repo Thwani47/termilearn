@@ -26,7 +26,7 @@ func openEditor() tea.Cmd {
 
 func main() {
 	m := tui.NewMainModel()
-	if _, err := tea.NewProgram(m, tea.WithAltScreen()).Run(); err != nil {
+	if _, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion()).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v", err)
 		os.Exit(1)
 	}

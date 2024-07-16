@@ -11,8 +11,11 @@ const (
 
 type mainModel struct {
 	conceptsList tea.Model
+	concept      conceptModel
 	state        appState
 	title        string
+	width        int
+	height       int
 }
 
 func (m mainModel) Init() tea.Cmd {
@@ -24,16 +27,26 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.state {
 	case viewConceptList:
 		m.conceptsList, cmd = m.conceptsList.Update(msg)
+	case viewConcept:
+		var model tea.Model
+		model, cmd = m.concept.Update(msg)
+		m.concept = model.(conceptModel)
 	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		if IsQuitting(msg) {
 			cmd = tea.Quit
 		}
 	case conceptSelectedMessage:
 		m.title = msg.choice
 		m.state = viewConcept
+		m.concept = NewConceptModel(m.title)
+		var model tea.Model
+		model, _ = m.concept.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		m.concept = model.(conceptModel)
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 	}
 	return m, cmd
 }
@@ -42,6 +55,8 @@ func (m mainModel) View() string {
 	switch m.state {
 	case viewConceptList:
 		return m.conceptsList.View()
+	case viewConcept:
+		return m.concept.View()
 	default:
 		return "I don't think we should be here"
 	}
