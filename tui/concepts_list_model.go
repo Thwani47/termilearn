@@ -1,4 +1,4 @@
-package main
+package tui
 
 import (
 	"fmt"
@@ -27,6 +27,10 @@ var (
 	}
 )
 
+type conceptSelectedMessage struct {
+	choice string
+}
+
 type listItem struct {
 	title       string
 	description string
@@ -45,8 +49,7 @@ func (li listItem) FilterValue() string {
 }
 
 type conceptListModel struct {
-	list   list.Model
-	choice string
+	list list.Model
 }
 
 func (c conceptListModel) Init() tea.Cmd {
@@ -89,7 +92,9 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {
-				m.choice = string(i.title)
+				return m, func() tea.Msg {
+					return conceptSelectedMessage{choice: i.title}
+				}
 			}
 			return m, nil
 		}
