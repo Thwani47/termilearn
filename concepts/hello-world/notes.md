@@ -1,4 +1,4 @@
-## Introduction to Go
+# Introduction to Go
 Golang, also known as Go, is an open source programming language designed for building scalable, secure, and reliable software. 
 
 Go is a statically-typed languge, which means that the type of a variable is known at compile time. This allows for better performance and more secure code.

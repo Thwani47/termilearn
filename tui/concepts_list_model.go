@@ -17,21 +17,23 @@ var (
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
 	concepts          = []list.Item{
-		listItem{title: "Hello World", description: "Learn how to print the classical 'Hello World' message in Go"},
-		listItem{title: "Values", description: "Learn about the basic types in Go"},
-		listItem{title: "Variables", description: "Learn how to declare and initialize variables in Go"},
-		listItem{title: "Constants", description: "Learn how to declare and initialize constants in Go"},
-		listItem{title: "For", description: "Learn how to loop in Go"},
-		listItem{title: "If/Else", description: "Learn how to use conditional statements in Go"},
-		listItem{title: "Switch", description: "Learn how to use switch statements in Go"},
+		listItem{id: "hello-world", title: "Hello World", description: "Learn how to print the classical 'Hello World' message in Go"},
+		listItem{id: "values", title: "Values", description: "Learn about the basic types in Go"},
+		listItem{id: "variables", title: "Variables", description: "Learn how to declare and initialize variables in Go"},
+		listItem{id: "constants", title: "Constants", description: "Learn how to declare and initialize constants in Go"},
+		listItem{id: "for-loop", title: "For", description: "Learn how to loop in Go"},
+		listItem{id: "if-else", title: "If/Else", description: "Learn how to use conditional statements in Go"},
+		listItem{id: "switch", title: "Switch", description: "Learn how to use switch statements in Go"},
 	}
 )
 
 type conceptSelectedMessage struct {
+	id     string
 	choice string
 }
 
 type listItem struct {
+	id          string
 	title       string
 	description string
 }
@@ -77,7 +79,7 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 		}
 	}
 
-	fmt.Fprintf(w, fn(str))
+	fmt.Fprint(w, fn(str))
 }
 
 func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -94,7 +96,7 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {
 				return m, func() tea.Msg {
-					return conceptSelectedMessage{choice: i.title}
+					return conceptSelectedMessage{id: i.id, choice: i.title}
 				}
 			}
 			return m, nil

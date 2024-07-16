@@ -13,7 +13,6 @@ type mainModel struct {
 	conceptsList tea.Model
 	concept      conceptModel
 	state        appState
-	title        string
 	width        int
 	height       int
 }
@@ -38,9 +37,8 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmd = tea.Quit
 		}
 	case conceptSelectedMessage:
-		m.title = msg.choice
 		m.state = viewConcept
-		m.concept = NewConceptModel(m.title)
+		m.concept = NewConceptModel(msg.id, msg.choice)
 		var model tea.Model
 		model, _ = m.concept.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 		m.concept = model.(conceptModel)

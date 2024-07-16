@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Thwani47/termilearn/helpers"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -26,9 +27,10 @@ var (
 )
 
 type conceptModel struct {
-	Title    string
-	ready    bool
-	viewport viewport.Model
+	conceptId string
+	title     string
+	ready     bool
+	viewport  viewport.Model
 }
 
 func (m conceptModel) Init() tea.Cmd {
@@ -55,7 +57,7 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
 			m.viewport.YPosition = headerHeight
 			m.viewport.HighPerformanceRendering = userHighPerformanceRender
-			m.viewport.SetContent(m.Title)
+			m.viewport.SetContent(readNotes(m.conceptId))
 			m.ready = true
 			m.viewport.YPosition = headerHeight + 1
 		} else {
@@ -75,16 +77,26 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
+func readNotes(conceptId string) string {
+	notes, err := helpers.ReaderConceptNotes(conceptId)
+
+	if err != nil {
+		return fmt.Sprintf("Error reading notes: %s", err)
+	}
+
+	return notes
+}
+
 func (m conceptModel) View() string {
 	if !m.ready {
-		return "\n Initializing... " + m.Title
+		return "\n Initializing... " + m.title
 	}
 
 	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
 func (m conceptModel) headerView() string {
-	title := viewPortTitleStyle.Render("Mr. Pager")
+	title := viewPortTitleStyle.Render(m.title)
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Height(title)))
 
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
@@ -103,9 +115,10 @@ func max(a, b int) int {
 
 	return b
 }
-func NewConceptModel(title string) conceptModel {
+func NewConceptModel(id string, title string) conceptModel {
 	model := conceptModel{
-		Title: title,
+		conceptId: id,
+		title:     title,
 	}
 
 	return model
