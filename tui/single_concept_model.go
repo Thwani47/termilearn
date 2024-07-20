@@ -26,18 +26,18 @@ var (
 	}()
 )
 
-type conceptModel struct {
+type singleConceptModel struct {
 	conceptId string
 	title     string
 	ready     bool
 	viewport  viewport.Model
 }
 
-func (m conceptModel) Init() tea.Cmd {
+func (m singleConceptModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m singleConceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -87,7 +87,7 @@ func readNotes(conceptId string) string {
 	return notes
 }
 
-func (m conceptModel) View() string {
+func (m singleConceptModel) View() string {
 	if !m.ready {
 		return "\n Initializing... " + m.title
 	}
@@ -95,21 +95,21 @@ func (m conceptModel) View() string {
 	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
-func (m conceptModel) headerView() string {
+func (m singleConceptModel) headerView() string {
 	title := viewPortTitleStyle.Render(m.title)
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Height(title)))
 
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
-func (m conceptModel) footerView() string {
+func (m singleConceptModel) footerView() string {
 	info := viewPortInfoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func NewConceptModel(id string, title string) conceptModel {
-	model := conceptModel{
+func NewSingleConceptModel(id string, title string) singleConceptModel {
+	model := singleConceptModel{
 		conceptId: id,
 		title:     title,
 	}

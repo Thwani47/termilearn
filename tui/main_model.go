@@ -7,13 +7,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type appState int
-
-const (
-	viewConceptList appState = iota
-	viewConcept
-)
-
 var (
 	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
 	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
@@ -25,30 +18,27 @@ var (
 )
 
 type mainModel struct {
-	Tabs         []string
-	TabContent   []string
-	activeTab    int
-	conceptsList tea.Model
-	concept      conceptModel
-	state        appState
-	width        int
-	height       int
+	Tabs          []string
+	conceptsModel conceptsModel
+	activeTab     int
+	windowHeight  int
+	windowWidth   int
 }
 
 func (m mainModel) Init() tea.Cmd {
-	return nil
+	return tea.Batch(
+		tea.EnterAltScreen,
+		tea.ClearScreen,
+		func() tea.Msg {
+			return tea.WindowSizeMsg{
+				Width:  80,
+				Height: 50,
+			}
+		})
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	switch m.state {
-	case viewConceptList:
-		m.conceptsList, cmd = m.conceptsList.Update(msg)
-	case viewConcept:
-		var model tea.Model
-		model, cmd = m.concept.Update(msg)
-		m.concept = model.(conceptModel)
-	}
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if IsQuitting(msg) {
@@ -63,29 +53,23 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = max(m.activeTab-1, 0)
 			return m, nil
 		}
-	case conceptSelectedMessage:
-		m.state = viewConcept
-		m.concept = NewConceptModel(msg.id, msg.choice)
-		var model tea.Model
-		model, _ = m.concept.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
-		m.concept = model.(conceptModel)
+
+		// delegate key events to teh conceptsModel if the first tab is actie
+		if m.activeTab == 0 {
+			var model tea.Model
+			model, cmd = m.conceptsModel.Update(msg)
+			m.conceptsModel = model.(conceptsModel)
+			return m, cmd
+		}
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		m.windowWidth = msg.Width
+		m.windowHeight = msg.Height
 	}
+
 	return m, cmd
 }
 
 func (m mainModel) View() string {
-	/*switch m.state {
-	case viewConceptList:
-		return m.conceptsList.View()
-	case viewConcept:
-		return m.concept.View()
-	default:
-		return "I don't think we should be here"
-	}*/
-
 	doc := strings.Builder{}
 
 	var renderedTabs []string
@@ -117,19 +101,26 @@ func (m mainModel) View() string {
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
 	doc.WriteString("\n")
-	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.TabContent[m.activeTab]))
+
+	var tabContent string
+
+	switch m.activeTab {
+	case 0:
+		tabContent = m.conceptsModel.View()
+	default:
+		tabContent = "Coming soon..."
+	}
+	contentHeight := m.windowHeight - lipgloss.Height(row) - tabDocStyle.GetVerticalPadding()
+	doc.WriteString(windowStyle.Height(contentHeight).Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(tabContent))
 	return tabDocStyle.Render(doc.String())
 
 }
 
 func NewMainModel() mainModel {
-	conceptsList := NewConceptListModel()
+	conceptsModel := NewConceptsModel()
 	tabs := []string{"Go Concepts", "Practice Questions", "Interview Questions", "Configuration"}
-	tabContent := []string{"Work in Progress ", "Coming Soon", "Coming Soon", "Coming Soon"}
 	return mainModel{
-		Tabs:         tabs,
-		TabContent:   tabContent,
-		conceptsList: conceptsList,
-		state:        viewConceptList,
+		Tabs:          tabs,
+		conceptsModel: conceptsModel,
 	}
 }
