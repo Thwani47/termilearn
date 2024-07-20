@@ -108,13 +108,6 @@ func (m conceptModel) footerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-
-	return b
-}
 func NewConceptModel(id string, title string) conceptModel {
 	model := conceptModel{
 		conceptId: id,
