@@ -119,7 +119,7 @@ func NewConceptListModel() conceptListModel {
 		list: list.New(concepts, itemDelegate{}, 0, 0),
 	}
 
-	conceptsListModel.list.Title = "Go Concepts"
+	conceptsListModel.list.Title = "Select Go Concept"
 	conceptsListModel.list.Styles.Title = titleStyle
 	conceptsListModel.list.Styles.PaginationStyle = paginationStyle
 	conceptsListModel.list.SetShowStatusBar(false)

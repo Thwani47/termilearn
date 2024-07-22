@@ -17,24 +17,26 @@ var (
 	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
 )
 
+type mainModelState int
+
+const (
+	viewTabs mainModelState = iota
+	viewConcepts
+	viewPracticeQuestions
+	viewInterviewQuestions
+	viewConfiguration
+)
+
 type mainModel struct {
-	Tabs          []string
+	tabs          []string
+	tabContent    []string
 	conceptsModel conceptsModel
 	activeTab     int
-	windowHeight  int
-	windowWidth   int
+	state         mainModelState
 }
 
 func (m mainModel) Init() tea.Cmd {
-	return tea.Batch(
-		tea.EnterAltScreen,
-		tea.ClearScreen,
-		func() tea.Msg {
-			return tea.WindowSizeMsg{
-				Width:  80,
-				Height: 50,
-			}
-		})
+	return nil
 }
 
 func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -44,39 +46,52 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if IsQuitting(msg) {
 			cmd = tea.Quit
 		}
-
-		switch keypress := msg.String(); keypress {
-		case "right", "l", "n", "tab":
-			m.activeTab = min(m.activeTab+1, len(m.Tabs)-1)
-			return m, nil
-		case "left", "h", "p", "shift+tab":
-			m.activeTab = max(m.activeTab-1, 0)
-			return m, nil
-		}
-
-		// delegate key events to teh conceptsModel if the first tab is actie
-		if m.activeTab == 0 {
+		if m.state == viewTabs {
+			switch keypress := msg.String(); keypress {
+			case "right", "n", "tab":
+				m.activeTab = min(m.activeTab+1, len(m.tabs)-1)
+				return m, nil
+			case "left", "p", "shift+tab":
+				m.activeTab = max(m.activeTab-1, 0)
+				return m, nil
+			case "enter":
+				switch m.activeTab {
+				case 0:
+					m.state = viewConcepts
+				case 1:
+					m.state = viewPracticeQuestions
+				case 2:
+					m.state = viewInterviewQuestions
+				case 3:
+					m.state = viewConfiguration
+				}
+				return m, nil
+			}
+		} else if m.state == viewConcepts {
+			// delegate key events to the conceptsModel
+			var subCmd tea.Cmd
 			var model tea.Model
-			model, cmd = m.conceptsModel.Update(msg)
+			model, subCmd = m.conceptsModel.Update(msg)
 			m.conceptsModel = model.(conceptsModel)
-			return m, cmd
+			return m, subCmd
 		}
-	case tea.WindowSizeMsg:
-		m.windowWidth = msg.Width
-		m.windowHeight = msg.Height
 	}
 
 	return m, cmd
 }
 
 func (m mainModel) View() string {
+	if m.state == viewConcepts {
+		return m.conceptsModel.View()
+	}
+
 	doc := strings.Builder{}
 
 	var renderedTabs []string
 
-	for i, t := range m.Tabs {
+	for i, t := range m.tabs {
 		var style lipgloss.Style
-		isFirst, isLast, isActive := i == 0, i == len(m.Tabs)-1, i == m.activeTab
+		isFirst, isLast, isActive := i == 0, i == len(m.tabs)-1, i == m.activeTab
 
 		if isActive {
 			style = activeTabStyle
@@ -102,16 +117,7 @@ func (m mainModel) View() string {
 	doc.WriteString(row)
 	doc.WriteString("\n")
 
-	var tabContent string
-
-	switch m.activeTab {
-	case 0:
-		tabContent = m.conceptsModel.View()
-	default:
-		tabContent = "Coming soon..."
-	}
-	contentHeight := m.windowHeight - lipgloss.Height(row) - tabDocStyle.GetVerticalPadding()
-	doc.WriteString(windowStyle.Height(contentHeight).Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(tabContent))
+	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.tabContent[m.activeTab]))
 	return tabDocStyle.Render(doc.String())
 
 }
@@ -119,8 +125,11 @@ func (m mainModel) View() string {
 func NewMainModel() mainModel {
 	conceptsModel := NewConceptsModel()
 	tabs := []string{"Go Concepts", "Practice Questions", "Interview Questions", "Configuration"}
+	tabContent := []string{"View Concepts", "View Go practice questions", "View Go interview questions", "Configure termilearn"}
 	return mainModel{
-		Tabs:          tabs,
+		tabs:          tabs,
+		tabContent:    tabContent,
 		conceptsModel: conceptsModel,
+		state:         viewTabs,
 	}
 }

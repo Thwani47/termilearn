@@ -1,6 +1,8 @@
 package tui
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+	tea "github.com/charmbracelet/bubbletea"
+)
 
 type conceptsModelstate int
 
@@ -21,6 +23,7 @@ func (m conceptsModel) Init() tea.Cmd {
 	return nil
 }
 
+/*
 func (m conceptsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch m.state {
@@ -46,6 +49,38 @@ func (m conceptsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 	}
+	return m, cmd
+}*/
+
+func (m conceptsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		if IsQuitting(msg) {
+			cmd = tea.Quit
+		}
+
+		if m.state == viewConceptsList {
+			m.conceptsList, cmd = m.conceptsList.Update(msg)
+			return m, cmd
+		}
+
+		if m.state == viewConcept {
+			var model tea.Model
+			model, cmd = m.concept.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+			m.concept = model.(singleConceptModel)
+			return m, cmd
+		}
+
+	case conceptSelectedMessage:
+		m.concept = NewSingleConceptModel(msg.id, msg.choice)
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+
+	}
+
 	return m, cmd
 }
 
