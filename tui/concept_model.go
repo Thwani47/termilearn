@@ -26,20 +26,19 @@ var (
 	}()
 )
 
-type singleConceptModel struct {
+type conceptModel struct {
 	conceptId string
 	title     string
-	ready     bool
 	viewport  viewport.Model
 	w         tea.WindowSizeMsg
 	back      BackHandler
 }
 
-func (m singleConceptModel) Init() tea.Cmd {
+func (m conceptModel) Init() tea.Cmd {
 	return nil
 }
 
-func (m singleConceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var (
 		cmd  tea.Cmd
 		cmds []tea.Cmd
@@ -52,29 +51,10 @@ func (m singleConceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		switch keypress := msg.String(); keypress {
 		case "b":
-			return m.back(m.w)
+			return m.back(tea.WindowSizeMsg{Width: 100, Height: 30})
 		}
 	case tea.WindowSizeMsg:
-		headerHeight := lipgloss.Height(m.headerView())
-		footerHeight := lipgloss.Height(m.footerView())
-		verticalMarginHeight := headerHeight + footerHeight
-
-		if !m.ready {
-			m.viewport = viewport.New(msg.Width, msg.Height-verticalMarginHeight)
-			m.viewport.YPosition = headerHeight
-			m.viewport.HighPerformanceRendering = userHighPerformanceRender
-			m.viewport.SetContent(readNotes(m.conceptId))
-			m.ready = true
-			m.viewport.YPosition = headerHeight + 1
-		} else {
-			m.viewport.Width = msg.Width
-			m.viewport.Height = msg.Height - verticalMarginHeight
-		}
-
-		if userHighPerformanceRender {
-			cmds = append(cmds, viewport.Sync(m.viewport))
-		}
-
+		m.w = msg
 	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
@@ -93,48 +73,49 @@ func readNotes(conceptId string) string {
 	return notes
 }
 
-func (m singleConceptModel) View() string {
-	if !m.ready {
-		return "\n Initializing... " + m.title
-	}
-
+func (m conceptModel) View() string {
 	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
 }
 
-func (m singleConceptModel) headerView() string {
+func (m conceptModel) headerView() string {
 	title := viewPortTitleStyle.Render(m.title)
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Height(title)))
 
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
-func (m singleConceptModel) footerView() string {
+func (m conceptModel) footerView() string {
 	info := viewPortInfoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func NewSingleConcept(id, title string, width, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
-	m := singleConceptModel{
+func NewConcept(id, title string, width, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
+	// read notes
+	content := readNotes(id)
+	headerHeight := lipgloss.Height(viewPortTitleStyle.Render(title))
+	footerHeight := lipgloss.Height(viewPortInfoStyle.Render(""))
+
+	verticalMarginHeight := headerHeight + footerHeight
+	availableHeight := height - verticalMarginHeight
+
+	vp := viewport.New(width, availableHeight)
+	vp.YPosition = headerHeight
+	vp.HighPerformanceRendering = userHighPerformanceRender
+	vp.SetContent(readNotes(content))
+
+	m := conceptModel{
 		conceptId: id,
 		title:     title,
 		w: tea.WindowSizeMsg{
 			Width:  width,
 			Height: height,
 		},
-		back: backHandler,
+		viewport: vp,
+		back:     backHandler,
 	}
 
 	cmd := tea.SetWindowTitle(title)
 	return m, cmd
 
-}
-
-func NewSingleConceptModel(id string, title string) singleConceptModel {
-	model := singleConceptModel{
-		conceptId: id,
-		title:     title,
-	}
-
-	return model
 }
