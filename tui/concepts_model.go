@@ -75,6 +75,11 @@ func (m conceptsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case conceptSelectedMessage:
 		m.concept = NewSingleConceptModel(msg.id, msg.choice)
+		var model tea.Model
+		model, cmd = m.concept.Update(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+		m.concept = model.(singleConceptModel)
+		return m, cmd
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height

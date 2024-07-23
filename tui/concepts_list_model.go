@@ -51,7 +51,9 @@ func (li listItem) FilterValue() string {
 }
 
 type conceptListModel struct {
-	list list.Model
+	list        list.Model
+	w           tea.WindowSizeMsg
+	backHandler BackHandler
 }
 
 func (c conceptListModel) Init() tea.Cmd {
@@ -100,6 +102,8 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 			return m, nil
+		case "b":
+			return m.backHandler(m.w)
 		}
 	case tea.WindowSizeMsg:
 		h, v := docStyle.GetFrameSize()
@@ -112,6 +116,28 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m conceptListModel) View() string {
 	return docStyle.Render(m.list.View())
+}
+
+func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
+	l := list.New(concepts, itemDelegate{}, 0, 0)
+
+	l.Title = "Select Go Concepts"
+	l.Styles.Title = titleStyle
+	l.Styles.PaginationStyle = paginationStyle
+	l.SetShowStatusBar(false)
+
+	cmd := l.NewStatusMessage("")
+
+	conceptListModel := conceptListModel{
+		list: l,
+		w: tea.WindowSizeMsg{
+			Width:  width,
+			Height: height,
+		},
+		backHandler: backHandler,
+	}
+
+	return conceptListModel, cmd
 }
 
 func NewConceptListModel() conceptListModel {

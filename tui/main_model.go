@@ -17,22 +17,11 @@ var (
 	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
 )
 
-type mainModelState int
-
-const (
-	viewTabs mainModelState = iota
-	viewConcepts
-	viewPracticeQuestions
-	viewInterviewQuestions
-	viewConfiguration
-)
-
 type mainModel struct {
 	tabs          []string
 	tabContent    []string
 	conceptsModel conceptsModel
 	activeTab     int
-	state         mainModelState
 }
 
 func (m mainModel) Init() tea.Cmd {
@@ -46,44 +35,35 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if IsQuitting(msg) {
 			cmd = tea.Quit
 		}
-		if m.state == viewTabs {
-			switch keypress := msg.String(); keypress {
-			case "right", "n", "tab":
-				m.activeTab = min(m.activeTab+1, len(m.tabs)-1)
+		switch keypress := msg.String(); keypress {
+		case "right", "n", "tab":
+			m.activeTab = min(m.activeTab+1, len(m.tabs)-1)
+			return m, nil
+		case "left", "p", "shift+tab":
+			m.activeTab = max(m.activeTab-1, 0)
+			return m, nil
+		case "enter":
+			switch m.activeTab {
+			case 0:
+				return NewConceptList(100, 400, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+					return m.Update(msg)
+				})
+			case 1:
 				return m, nil
-			case "left", "p", "shift+tab":
-				m.activeTab = max(m.activeTab-1, 0)
+			case 2:
 				return m, nil
-			case "enter":
-				switch m.activeTab {
-				case 0:
-					m.state = viewConcepts
-				case 1:
-					m.state = viewPracticeQuestions
-				case 2:
-					m.state = viewInterviewQuestions
-				case 3:
-					m.state = viewConfiguration
-				}
+
+			case 3:
 				return m, nil
+
 			}
-		} else if m.state == viewConcepts {
-			// delegate key events to the conceptsModel
-			var subCmd tea.Cmd
-			var model tea.Model
-			model, subCmd = m.conceptsModel.Update(msg)
-			m.conceptsModel = model.(conceptsModel)
-			return m, subCmd
+			return m, nil
 		}
 	}
-
 	return m, cmd
 }
 
 func (m mainModel) View() string {
-	if m.state == viewConcepts {
-		return m.conceptsModel.View()
-	}
 
 	doc := strings.Builder{}
 
@@ -130,6 +110,5 @@ func NewMainModel() mainModel {
 		tabs:          tabs,
 		tabContent:    tabContent,
 		conceptsModel: conceptsModel,
-		state:         viewTabs,
 	}
 }
