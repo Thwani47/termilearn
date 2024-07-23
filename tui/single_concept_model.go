@@ -125,9 +125,7 @@ func NewSingleConcept(id, title string, width, height int, backHandler BackHandl
 		back: backHandler,
 	}
 
-	var cmd tea.Cmd
-	m, cmd = m.Update(m.w)
-
+	cmd := tea.SetWindowTitle(title)
 	return m, cmd
 
 }

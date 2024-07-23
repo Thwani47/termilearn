@@ -106,8 +106,10 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.backHandler(m.w)
 		}
 	case tea.WindowSizeMsg:
+		m.w = msg
 		h, v := docStyle.GetFrameSize()
-		m.list.SetSize(msg.Width-h, msg.Height-v)
+		availableHeight := msg.Height - v - 2
+		m.list.SetSize(msg.Width-h, availableHeight)
 	}
 	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
@@ -121,10 +123,13 @@ func (m conceptListModel) View() string {
 func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
 	l := list.New(concepts, itemDelegate{}, 0, 0)
 
-	l.Title = "Select Go Concepts"
+	l.Title = "Select Go Concept"
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.SetShowStatusBar(false)
+	_, v := docStyle.GetFrameSize()
+	availableHeight := height - v - 2
+	l.SetSize(width, availableHeight)
 
 	cmd := l.NewStatusMessage("")
 
@@ -138,17 +143,4 @@ func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, 
 	}
 
 	return conceptListModel, cmd
-}
-
-func NewConceptListModel() conceptListModel {
-	conceptsListModel := conceptListModel{
-		list: list.New(concepts, itemDelegate{}, 0, 0),
-	}
-
-	conceptsListModel.list.Title = "Select Go Concept"
-	conceptsListModel.list.Styles.Title = titleStyle
-	conceptsListModel.list.Styles.PaginationStyle = paginationStyle
-	conceptsListModel.list.SetShowStatusBar(false)
-
-	return conceptsListModel
 }

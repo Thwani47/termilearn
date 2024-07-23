@@ -18,10 +18,11 @@ var (
 )
 
 type mainModel struct {
-	tabs          []string
-	tabContent    []string
-	conceptsModel conceptsModel
-	activeTab     int
+	tabs       []string
+	tabContent []string
+	activeTab  int
+	width      int
+	height     int
 }
 
 func (m mainModel) Init() tea.Cmd {
@@ -45,7 +46,7 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			switch m.activeTab {
 			case 0:
-				return NewConceptList(100, 400, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+				return NewConceptList(m.width, m.height, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 					return m.Update(msg)
 				})
 			case 1:
@@ -59,6 +60,9 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		}
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 	}
 	return m, cmd
 }
@@ -103,12 +107,10 @@ func (m mainModel) View() string {
 }
 
 func NewMainModel() mainModel {
-	conceptsModel := NewConceptsModel()
 	tabs := []string{"Go Concepts", "Practice Questions", "Interview Questions", "Configuration"}
 	tabContent := []string{"View Concepts", "View Go practice questions", "View Go interview questions", "Configure termilearn"}
 	return mainModel{
-		tabs:          tabs,
-		tabContent:    tabContent,
-		conceptsModel: conceptsModel,
+		tabs:       tabs,
+		tabContent: tabContent,
 	}
 }
