@@ -31,6 +31,8 @@ type singleConceptModel struct {
 	title     string
 	ready     bool
 	viewport  viewport.Model
+	w         tea.WindowSizeMsg
+	back      BackHandler
 }
 
 func (m singleConceptModel) Init() tea.Cmd {
@@ -47,6 +49,10 @@ func (m singleConceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if IsQuitting(msg) {
 			return m, tea.Quit
+		}
+		switch keypress := msg.String(); keypress {
+		case "b":
+			return m.back(m.w)
 		}
 	case tea.WindowSizeMsg:
 		headerHeight := lipgloss.Height(m.headerView())
@@ -106,6 +112,24 @@ func (m singleConceptModel) footerView() string {
 	info := viewPortInfoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
+}
+
+func NewSingleConcept(id, title string, width, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
+	m := singleConceptModel{
+		conceptId: id,
+		title:     title,
+		w: tea.WindowSizeMsg{
+			Width:  width,
+			Height: height,
+		},
+		back: backHandler,
+	}
+
+	var cmd tea.Cmd
+	m, cmd = m.Update(m.w)
+
+	return m, cmd
+
 }
 
 func NewSingleConceptModel(id string, title string) singleConceptModel {

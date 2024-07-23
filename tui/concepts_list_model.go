@@ -97,9 +97,9 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {
-				return m, func() tea.Msg {
-					return conceptSelectedMessage{id: i.id, choice: i.title}
-				}
+				return NewSingleConcept(i.id, i.title, 100, 100, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+					return m.Update(msg)
+				})
 			}
 			return m, nil
 		case "b":
