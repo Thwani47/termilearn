@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -27,11 +29,15 @@ var (
 		b.Left = "┤"
 		return titleStyle.BorderStyle(b)
 	}()
+
+	helpHeight = 6
 )
 
 type conceptModel struct {
 	conceptId string
 	title     string
+	help      help.Model
+	keys      keyMap
 	viewport  viewport.Model
 	w         tea.WindowSizeMsg
 	back      BackHandler
@@ -49,15 +55,17 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if str := msg.String(); str == "ctrl+c" || str == "q" {
+		switch {
+		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
-		}
-		switch keypress := msg.String(); keypress {
-		case "b":
+		case key.Matches(msg, m.keys.Back):
 			return m.back(tea.WindowSizeMsg{Width: 100, Height: 30})
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 		}
 	case tea.WindowSizeMsg:
 		m.w = msg
+		m.help.Width = msg.Width
 	}
 
 	m.viewport, cmd = m.viewport.Update(msg)
@@ -77,7 +85,8 @@ func readNotes(conceptId string) string {
 }
 
 func (m conceptModel) View() string {
-	return fmt.Sprintf("%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView())
+	helpView := m.help.View(m.keys)
+	return fmt.Sprintf("%s\n%s\n%s\n%s", m.headerView(), m.viewport.View(), m.footerView(), helpView)
 }
 
 func (m conceptModel) headerView() string {
@@ -100,7 +109,7 @@ func NewConcept(id, title string, width, height int, backHandler BackHandler) (t
 	footerHeight := lipgloss.Height(viewPortInfoStyle.Render(""))
 
 	verticalMarginHeight := headerHeight + footerHeight
-	availableHeight := height - verticalMarginHeight
+	availableHeight := height - verticalMarginHeight - helpHeight
 
 	vp := viewport.New(width, availableHeight)
 	vp.YPosition = headerHeight
@@ -110,6 +119,8 @@ func NewConcept(id, title string, width, height int, backHandler BackHandler) (t
 	m := conceptModel{
 		conceptId: id,
 		title:     title,
+		help:      help.New(),
+		keys:      keys,
 		w: tea.WindowSizeMsg{
 			Width:  width,
 			Height: height,
