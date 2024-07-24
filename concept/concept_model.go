@@ -2,6 +2,8 @@ package concept
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -62,6 +64,8 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.back(tea.WindowSizeMsg{Width: 100, Height: 30})
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, m.keys.Practice):
+			return m, practiceConcept(m.conceptId)
 		}
 	case tea.WindowSizeMsg:
 		m.w = msg
@@ -72,6 +76,24 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
+}
+
+type doneEditingMsg struct {
+	err error
+}
+
+func practiceConcept(concept string) tea.Cmd {
+	editor := os.Getenv("EDITOR")
+
+	if editor == "" {
+		editor = "vim"
+	}
+	file := fmt.Sprintf("concepts/%s/%s.go", concept, concept)
+	command := exec.Command(editor, file)
+
+	return tea.ExecProcess(command, func(err error) tea.Msg {
+		return doneEditingMsg{err}
+	})
 }
 
 func readNotes(conceptId string) string {
