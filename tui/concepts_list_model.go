@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/Thwani47/termilearn/concept"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -97,7 +98,7 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {
-				return NewConcept(i.id, i.title, m.w.Width, m.w.Height, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+				return concept.NewConcept(i.id, i.title, m.w.Width, m.w.Height, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 					return m.Update(msg)
 				})
 			}

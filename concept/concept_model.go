@@ -1,14 +1,15 @@
-package tui
+package concept
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/Thwani47/termilearn/helpers"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
 
 const userHighPerformanceRender = false
 
@@ -18,6 +19,8 @@ var (
 		b.Right = "├"
 		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
 	}()
+
+	titleStyle = lipgloss.NewStyle().MarginLeft(2).Bold(true).Foreground(lipgloss.Color("#FFFDF5")).Background(lipgloss.Color("#25A065")).Padding(0, 1)
 
 	viewPortInfoStyle = func() lipgloss.Style {
 		b := lipgloss.RoundedBorder()
@@ -46,7 +49,7 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if IsQuitting(msg) {
+		if str := msg.String(); str == "ctrl+c" || str == "q" {
 			return m, tea.Quit
 		}
 		switch keypress := msg.String(); keypress {
@@ -64,7 +67,7 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func readNotes(conceptId string) string {
-	notes, err := helpers.ReaderConceptNotes(conceptId)
+	notes, err := ReaderConceptNotes(conceptId)
 
 	if err != nil {
 		return fmt.Sprintf("Error reading notes: %s", err)
@@ -102,7 +105,7 @@ func NewConcept(id, title string, width, height int, backHandler BackHandler) (t
 	vp := viewport.New(width, availableHeight)
 	vp.YPosition = headerHeight
 	vp.HighPerformanceRendering = userHighPerformanceRender
-	vp.SetContent(readNotes(content))
+	vp.SetContent(content)
 
 	m := conceptModel{
 		conceptId: id,
