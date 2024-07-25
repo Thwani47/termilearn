@@ -34,7 +34,7 @@ Every Go program must start with the package declaration. Go programs are organi
 import "fmt"
 ```
 
-As we mentioned above that Go programs are organized into packages, here we import the `fmt` package. The `import` keyword allows us to use types and functions defined in other packages. The `fmt` allows us to work with formatted Input/Output functions (i.e, allow us to read input and print output from our programs.
+As we mentioned above that Go programs are organized into packages, here we import the `fmt` package. The `import` keyword allows us to use types and functions defined in other packages. The `fmt` allows us to work with formatted Input/Output functions (i.e, allow us to read input and print output from our programs).
 
 ```go
 func main(){
@@ -43,4 +43,3 @@ func main(){
 ```
 
 The keyword `func` is used to define a function in Go. Under the `main` package, a function `main` is required. This is where our program starts. Inside the `main` function, we call the `Println` function defined in the `fmt` package. This method allows us to print output to the standard output. We use this method to print the text "Hello World" to the standard output.
-

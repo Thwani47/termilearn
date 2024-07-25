@@ -2,7 +2,7 @@ package concept
 
 import "github.com/charmbracelet/bubbles/key"
 
-type keyMap struct {
+type viewportKeyMap struct {
 	Help     key.Binding
 	Up       key.Binding
 	Down     key.Binding
@@ -12,19 +12,19 @@ type keyMap struct {
 }
 
 // ShortHelp returns key bindings to be shown in the mini help view
-func (k keyMap) ShortHelp() []key.Binding {
+func (k viewportKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Practice, k.Up, k.Down, k.Help, k.Back, k.Quit}
 }
 
 // FullHelp returns key bindings for the expanded help view
-func (k keyMap) FullHelp() [][]key.Binding {
+func (k viewportKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Practice, k.Up, k.Down},
 		{k.Help, k.Back, k.Quit},
 	}
 }
 
-var keys = keyMap{
+var viewportKeys = viewportKeyMap{
 	Practice: key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "practice")),
 	Up:       key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "scroll up")),
 	Down:     key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "scroll down")),

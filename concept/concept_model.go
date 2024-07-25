@@ -2,8 +2,6 @@ package concept
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/help"
@@ -39,7 +37,7 @@ type conceptModel struct {
 	conceptId string
 	title     string
 	help      help.Model
-	keys      keyMap
+	keys      viewportKeyMap
 	viewport  viewport.Model
 	w         tea.WindowSizeMsg
 	back      BackHandler
@@ -65,7 +63,10 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, m.keys.Practice):
-			return m, practiceConcept(m.conceptId)
+			return NewPractice(m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+				return m.Update(msg)
+			})
+			//return m, practiceConcept(m.conceptId)
 		}
 	case tea.WindowSizeMsg:
 		m.w = msg
@@ -76,24 +77,6 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	return m, tea.Batch(cmds...)
-}
-
-type doneEditingMsg struct {
-	err error
-}
-
-func practiceConcept(concept string) tea.Cmd {
-	editor := os.Getenv("EDITOR")
-
-	if editor == "" {
-		editor = "vim"
-	}
-	file := fmt.Sprintf("concept/practice/%s/%s.go", concept, concept)
-	command := exec.Command(editor, file)
-
-	return tea.ExecProcess(command, func(err error) tea.Msg {
-		return doneEditingMsg{err}
-	})
 }
 
 func readNotes(conceptId string) string {
@@ -142,7 +125,7 @@ func NewConcept(id, title string, width, height int, backHandler BackHandler) (t
 		conceptId: id,
 		title:     title,
 		help:      help.New(),
-		keys:      keys,
+		keys:      viewportKeys,
 		w: tea.WindowSizeMsg{
 			Width:  width,
 			Height: height,
