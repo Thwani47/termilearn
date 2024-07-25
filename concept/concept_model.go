@@ -88,7 +88,7 @@ func practiceConcept(concept string) tea.Cmd {
 	if editor == "" {
 		editor = "vim"
 	}
-	file := fmt.Sprintf("concepts/%s/%s.go", concept, concept)
+	file := fmt.Sprintf("concept/practice/%s/%s.go", concept, concept)
 	command := exec.Command(editor, file)
 
 	return tea.ExecProcess(command, func(err error) tea.Msg {

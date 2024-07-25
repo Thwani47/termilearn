@@ -7,12 +7,12 @@ import (
 	"github.com/charmbracelet/glamour"
 )
 
-//go:embed concepts/*
+//go:embed notes/*
 var notesReader embed.FS
 
 func ReaderConceptNotes(concept string) (string, error) {
 
-	filePath := fmt.Sprintf("concepts/%s/notes.md", concept)
+	filePath := fmt.Sprintf("notes/%s.md", concept)
 
 	notesContent, err := notesReader.ReadFile(filePath)
 
