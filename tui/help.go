@@ -28,3 +28,14 @@ var tabKeys = tabsKeyMap{
 	Prev:   key.NewBinding(key.WithKeys("left", "p", "shift+tab"), key.WithHelp("p/shift+tab", "move to the previous tab")),
 	Select: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "selected current tab")),
 }
+
+type conceptListKeyMap struct {
+	Choose key.Binding
+	Back   key.Binding
+	Quit   key.Binding
+}
+
+var conceptListKeys = conceptListKeyMap{
+	Choose: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select concept")),
+	Back:   key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "go back")),
+}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Thwani47/termilearn/concept"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -53,6 +54,7 @@ func (li listItem) FilterValue() string {
 
 type conceptListModel struct {
 	list        list.Model
+	keys        conceptListKeyMap
 	backHandler BackHandler
 	w           tea.WindowSizeMsg
 }
@@ -91,11 +93,12 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.list.FilterState() == list.Filtering {
 			break
 		}
-		if IsQuitting(msg) {
+		switch {
+		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
-		}
-		switch msg.String() {
-		case "enter":
+		case key.Matches(msg, m.keys.Back):
+			return m.backHandler(m.w)
+		case key.Matches(msg, m.keys.Choose):
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {
 				return concept.NewConcept(i.id, i.title, m.w.Width, m.w.Height, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
@@ -103,8 +106,6 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				})
 			}
 			return m, nil
-		case "b":
-			return m.backHandler(m.w)
 		}
 	case tea.WindowSizeMsg:
 		m.w = msg
@@ -131,6 +132,12 @@ func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, 
 	_, v := docStyle.GetFrameSize()
 	availableHeight := height - v - 2
 	l.SetSize(width, availableHeight)
+	l.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{conceptListKeys.Choose}
+	}
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{conceptListKeys.Choose}
+	}
 
 	cmd := l.NewStatusMessage("")
 
@@ -140,6 +147,7 @@ func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, 
 			Width:  width,
 			Height: height,
 		},
+		keys:        conceptListKeys,
 		backHandler: backHandler,
 	}
 
