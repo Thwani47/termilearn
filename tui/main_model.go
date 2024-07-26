@@ -1,8 +1,11 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -15,14 +18,21 @@ var (
 	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
 	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
 	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
+	helpHeight        = 6
 )
 
 type mainModel struct {
-	tabs       []string
-	tabContent []string
-	activeTab  int
-	width      int
-	height     int
+	activeTab int
+	width     int
+	height    int
+	keys      tabsKeyMap
+	help      help.Model
+	tabs      []Tab
+}
+
+type Tab struct {
+	title   string
+	content string
 }
 
 func (m mainModel) Init() tea.Cmd {
@@ -33,17 +43,18 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if IsQuitting(msg) {
-			cmd = tea.Quit
-		}
-		switch keypress := msg.String(); keypress {
-		case "right", "n", "tab":
+		switch {
+		case key.Matches(msg, m.keys.Quit):
+			return m, tea.Quit
+		case key.Matches(msg, m.keys.Next):
 			m.activeTab = min(m.activeTab+1, len(m.tabs)-1)
 			return m, nil
-		case "left", "p", "shift+tab":
+		case key.Matches(msg, m.keys.Prev):
 			m.activeTab = max(m.activeTab-1, 0)
 			return m, nil
-		case "enter":
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
+		case key.Matches(msg, m.keys.Select):
 			switch m.activeTab {
 			case 0:
 				return NewConceptList(m.width, m.height, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
@@ -56,13 +67,12 @@ func (m mainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case 3:
 				return m, nil
-
 			}
-			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.help.Width = msg.Width
 	}
 	return m, cmd
 }
@@ -94,23 +104,30 @@ func (m mainModel) View() string {
 			border.BottomRight = "┤"
 		}
 		style = style.Border(border)
-		renderedTabs = append(renderedTabs, style.Render(t))
+		renderedTabs = append(renderedTabs, style.Render(t.title))
 	}
 
 	row := lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 	doc.WriteString(row)
 	doc.WriteString("\n")
 
-	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.tabContent[m.activeTab]))
+	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.tabs[m.activeTab].content))
+	helpView := m.help.View(m.keys)
+	doc.WriteString(fmt.Sprintf("\n%s", helpView))
 	return tabDocStyle.Render(doc.String())
 
 }
 
 func NewMainModel() mainModel {
-	tabs := []string{"Go Concepts", "Practice Questions", "Interview Questions", "Configuration"}
-	tabContent := []string{"View Concepts", "View Go practice questions", "View Go interview questions", "Configure termilearn"}
+	tabs := []Tab{
+		{title: "Go Concepts", content: "View Concepts"},
+		{title: "Practice Questions", content: "View Go practice questions"},
+		{title: "Interview Questions", content: "View Go interview questions"},
+		{title: "Configuration", content: "Configure termilearn"},
+	}
 	return mainModel{
-		tabs:       tabs,
-		tabContent: tabContent,
+		tabs: tabs,
+		help: help.New(),
+		keys: tabKeys,
 	}
 }

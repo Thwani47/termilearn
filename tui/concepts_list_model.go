@@ -53,8 +53,8 @@ func (li listItem) FilterValue() string {
 
 type conceptListModel struct {
 	list        list.Model
-	w           tea.WindowSizeMsg
 	backHandler BackHandler
+	w           tea.WindowSizeMsg
 }
 
 func (c conceptListModel) Init() tea.Cmd {
