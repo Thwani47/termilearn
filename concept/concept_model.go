@@ -34,13 +34,13 @@ var (
 )
 
 type conceptModel struct {
+	help      help.Model
+	back      BackHandler
 	conceptId string
 	title     string
-	help      help.Model
-	keys      viewportKeyMap
 	viewport  viewport.Model
+	keys      viewportKeyMap
 	w         tea.WindowSizeMsg
-	back      BackHandler
 }
 
 func (m conceptModel) Init() tea.Cmd {

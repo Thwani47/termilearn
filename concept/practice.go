@@ -5,33 +5,40 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/charmbracelet/bubbles/filepicker"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 const baseUrl = "https://raw.githubusercontent.com/Thwani47/termilearn-sourcefiles/master"
 
+var (
+	spinnerTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
+	spinnerStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+)
+
 type practiceModel struct {
-	filepicker   filepicker.Model
-	selectedFile string
-	quitting     bool
-	back         BackHandler
-	w            tea.WindowSizeMsg
-	err          error
+	err               error
+	quitting          bool
+	back              BackHandler
+	w                 tea.WindowSizeMsg
+	isDownloadingFile bool
+	spinner           spinner.Model
 }
 
-type clearErrorMsg struct{}
 type doneEditingMsg struct{ err error }
 
 func (p practiceModel) Init() tea.Cmd {
-	return nil
+	// TODO: check if file for the concept exists and download it if it does not
+	// TODO: this should be return a tea.Cmd (maybe batch the commands)
+	// return tea.Batch(p.spinner.Tick, downloadFileFunc)
+	// TODO: add help menu for the user (edit (e) , t (test), reset (r), b (back) , q (quit))
+	return p.spinner.Tick
 }
 
 func (p practiceModel) View() string {
-	if p.quitting {
-		return ""
-	}
-	return "Practice"
+
+	return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Downloading..."))
 }
 
 func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -46,11 +53,13 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	case tea.WindowSizeMsg:
 		p.w = msg
-	case clearErrorMsg:
-		p.err = nil
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		p.spinner, cmd = p.spinner.Update(msg)
+		return p, cmd
 	}
 
-	return p, nil
+	return p, p.spinner.Tick
 }
 
 func practiceConcept(concept string) tea.Cmd {
@@ -67,11 +76,16 @@ func practiceConcept(concept string) tea.Cmd {
 	})
 }
 
+// TODO: we need to pass in the title of the concept
 func NewPractice(w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
 
+	s := spinner.New()
+	s.Spinner = spinner.Points
+	s.Style = spinnerStyle
 	p := practiceModel{
-		back: backhandler,
-		w:    w,
+		back:    backhandler,
+		w:       w,
+		spinner: s,
 	}
 
 	cmd := tea.SetWindowTitle("Practice") // specify concept being practices
