@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -17,6 +19,7 @@ const baseUrl = "https://raw.githubusercontent.com/Thwani47/termilearn-sourcefil
 var (
 	spinnerTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
 	spinnerStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+	helpHeight       = 6
 )
 
 type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
@@ -25,6 +28,8 @@ type practiceModel struct {
 	concept           string
 	err               error
 	quitting          bool
+	help              help.Model
+	keys              keyMap
 	back              BackHandler
 	w                 tea.WindowSizeMsg
 	isDownloadingFile bool
@@ -84,21 +89,28 @@ func (p practiceModel) View() string {
 	}
 
 	if p.isDownloadingFile {
-		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Downloading..."))
+		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Setting up..."))
 	}
 
-	return fmt.Sprintf("\n%s\n\n", spinnerTextStyle("Done downloading..."))
+	helpView := p.help.View(p.keys)
+
+	return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Ready for practice..."), helpView)
+
 }
 
 func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, p.keys.Quit):
 			p.quitting = true
 			return p, tea.Quit
-		case "b":
+		case key.Matches(msg, p.keys.Back):
 			return p.back(p.w)
+		case key.Matches(msg, p.keys.Help):
+			p.help.ShowAll = !p.help.ShowAll
+		case key.Matches(msg, p.keys.Open):
+			return p, practiceConcept(p.concept)
 		}
 	case tea.WindowSizeMsg:
 		p.w = msg
@@ -124,7 +136,7 @@ func practiceConcept(concept string) tea.Cmd {
 	if editor == "" {
 		editor = "vim"
 	}
-	file := fmt.Sprintf("concept/practice/%s/%s.go", concept, concept)
+	file := fmt.Sprintf("practice/concepts/%s/main.go", concept)
 	command := exec.Command(editor, file)
 
 	return tea.ExecProcess(command, func(err error) tea.Msg {
@@ -141,6 +153,8 @@ func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (
 		concept:           concept,
 		back:              backhandler,
 		w:                 w,
+		help:              help.New(),
+		keys:              keys,
 		isDownloadingFile: true,
 		spinner:           s,
 	}
