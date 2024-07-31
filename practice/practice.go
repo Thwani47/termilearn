@@ -34,6 +34,7 @@ type practiceModel struct {
 	w                 tea.WindowSizeMsg
 	isDownloadingFile bool
 	spinner           spinner.Model
+	testOutput        string
 }
 
 type doneEditingMsg struct{ err error }
@@ -44,6 +45,7 @@ func (e errorMsg) Error() string {
 }
 
 type fileDownloadedMsg struct{}
+type runTestsMsg struct{ message string }
 
 func downloadFile(concept string) tea.Cmd {
 	return func() tea.Msg {
@@ -92,6 +94,10 @@ func (p practiceModel) View() string {
 		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Setting up..."))
 	}
 
+	if p.testOutput != "" {
+		return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Tests ran successfully"), p.testOutput)
+	}
+
 	helpView := p.help.View(p.keys)
 
 	return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Ready for practice..."), helpView)
@@ -111,6 +117,8 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			p.help.ShowAll = !p.help.ShowAll
 		case key.Matches(msg, p.keys.Open):
 			return p, practiceConcept(p.concept)
+		case key.Matches(msg, p.keys.Test):
+			return p, testConcept(p.concept)
 		}
 	case tea.WindowSizeMsg:
 		p.w = msg
@@ -121,6 +129,9 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case fileDownloadedMsg:
 		p.isDownloadingFile = false
 		return p, nil
+	case runTestsMsg:
+		p.testOutput = msg.message
+		return p, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		p.spinner, cmd = p.spinner.Update(msg)
@@ -128,6 +139,25 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return p, p.spinner.Tick
+}
+
+func testConcept(concept string) tea.Cmd {
+	return func() tea.Msg {
+		cmd := exec.Command("go", "test", fmt.Sprintf("practice/concepts/%s/main.go", concept))
+
+		output, err := cmd.CombinedOutput()
+		/*	var out bytes.Buffer
+			var stderr bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &stderr
+
+			err := cmd.Run()*/
+		if err != nil {
+			return errorMsg{fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
+		}
+
+		return runTestsMsg{string(output)}
+	}
 }
 
 func practiceConcept(concept string) tea.Cmd {
