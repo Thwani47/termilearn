@@ -2,8 +2,6 @@ package practice
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"os/exec"
 
@@ -14,11 +12,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const baseUrl = "https://raw.githubusercontent.com/Thwani47/termilearn-sourcefiles/master"
-
 var (
 	spinnerTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
 	spinnerStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
+	errorStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render
 	helpHeight       = 6
 )
 
@@ -44,50 +41,14 @@ func (e errorMsg) Error() string {
 	return e.err.Error()
 }
 
-type fileDownloadedMsg struct{}
-type runTestsMsg struct{ message string }
-
-func downloadFile(concept string) tea.Cmd {
-	return func() tea.Msg {
-		dir := fmt.Sprintf("practice/concepts/%s", concept)
-		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			return errorMsg{err}
-		}
-
-		out, err := os.Create(fmt.Sprintf("practice/concepts/%s/main.go", concept))
-		if err != nil {
-			return errorMsg{err}
-		}
-		defer out.Close()
-		resp, err := http.Get(fmt.Sprintf("%s/%s/practice-questions/%s/main.go", baseUrl, "Go", concept))
-		if err != nil {
-			return errorMsg{err}
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			return errorMsg{fmt.Errorf("Error downloading file: %s", resp.Status)}
-		}
-		_, err = io.Copy(out, resp.Body)
-		if err != nil {
-			return errorMsg{err}
-		}
-		return fileDownloadedMsg{}
-	}
-}
-
 func (p practiceModel) Init() tea.Cmd {
-	// TODO: check if file for the concept exists and download it if it does not
-	// TODO: this should be return a tea.Cmd (maybe batch the commands)
-	// return tea.Batch(p.spinner.Tick, downloadFileFunc)
-	// TODO: add help menu for the user (edit (e) , t (test), reset (r), b (back) , q (quit))
-
 	return p.spinner.Tick
 }
 
 func (p practiceModel) View() string {
 
 	if p.err != nil {
-		return fmt.Sprintf("\n\nError occured: %s", p.err.Error())
+		return fmt.Sprintf("\n\n%s\n\n", errorStyle(p.err.Error()))
 	}
 
 	if p.isDownloadingFile {
@@ -142,16 +103,11 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func testConcept(concept string) tea.Cmd {
+	// TODO: how can we capture the tests and show them as a list to the user (maybe show a checkmark next to the test that passed and a cross next to the test that failed)
 	return func() tea.Msg {
-		cmd := exec.Command("go", "test", fmt.Sprintf("practice/concepts/%s/main.go", concept))
+		cmd := exec.Command("go", "test", fmt.Sprintf("practice/concepts/%s/%s_test.go", concept, concept))
 
 		output, err := cmd.CombinedOutput()
-		/*	var out bytes.Buffer
-			var stderr bytes.Buffer
-			cmd.Stdout = &out
-			cmd.Stderr = &stderr
-
-			err := cmd.Run()*/
 		if err != nil {
 			return errorMsg{fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
 		}
@@ -189,8 +145,8 @@ func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (
 		spinner:           s,
 	}
 
-	cmd := downloadFile(concept)
+	cmd := getPracticeFiles(concept)
 
-	_ = tea.SetWindowTitle("Practice") // specify concept being practices
+	_ = tea.SetWindowTitle(fmt.Sprintf("Practice: %s", concept))
 	return p, cmd
 }
