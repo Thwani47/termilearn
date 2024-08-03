@@ -31,7 +31,7 @@ type practiceModel struct {
 	w                 tea.WindowSizeMsg
 	isDownloadingFile bool
 	spinner           spinner.Model
-	testOutput        string
+	tests             []testResult
 }
 
 type doneEditingMsg struct{ err error }
@@ -39,6 +39,21 @@ type errorMsg struct{ err error }
 
 func (e errorMsg) Error() string {
 	return e.err.Error()
+}
+
+type runTestsMsg struct {
+	tests []testResult
+	err   error
+}
+
+func (r runTestsMsg) Error() string {
+	return r.err.Error()
+}
+
+type testResult struct {
+	name         string
+	passed       bool
+	errorMessage string
 }
 
 func (p practiceModel) Init() tea.Cmd {
@@ -55,8 +70,19 @@ func (p practiceModel) View() string {
 		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Setting up..."))
 	}
 
-	if p.testOutput != "" {
-		return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Tests ran successfully"), p.testOutput)
+	if len(p.tests) > 0 {
+		var resultView string
+
+		for _, test := range p.tests {
+			if test.passed {
+				resultView += fmt.Sprintf("✅ %s\n", test.name)
+			} else {
+				resultView += fmt.Sprintf("❌ %s\n%s\n", test.name, errorStyle(test.errorMessage))
+			}
+
+		}
+		return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Tests results: "), resultView)
+
 	}
 
 	helpView := p.help.View(p.keys)
@@ -91,7 +117,10 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p.isDownloadingFile = false
 		return p, nil
 	case runTestsMsg:
-		p.testOutput = msg.message
+		if msg.err != nil {
+			p.err = msg.err
+		}
+		p.tests = msg.tests
 		return p, nil
 	case spinner.TickMsg:
 		var cmd tea.Cmd
@@ -109,10 +138,14 @@ func testConcept(concept string) tea.Cmd {
 
 		output, err := cmd.CombinedOutput()
 		if err != nil {
-			return errorMsg{fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
+			tests := parseTestOutput(string(output))
+			return runTestsMsg{tests: tests, err: fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
+			//		return errorMsg{fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
 		}
 
-		return runTestsMsg{string(output)}
+		tests := parseTestOutput(string(output))
+
+		return runTestsMsg{tests: tests}
 	}
 }
 

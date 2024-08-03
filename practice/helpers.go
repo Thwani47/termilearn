@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -12,7 +13,8 @@ import (
 const baseUrl = "https://raw.githubusercontent.com/Thwani47/termilearn-sourcefiles/master"
 
 type fileDownloadedMsg struct{}
-type runTestsMsg struct{ message string }
+
+//type runTestsMsg struct{ message string }
 
 func getPracticeFiles(concept string) tea.Cmd {
 	practiceFileCmd := downloadFile(concept, "main.go")
@@ -22,11 +24,16 @@ func getPracticeFiles(concept string) tea.Cmd {
 }
 
 func downloadFile(folder, fileName string) tea.Cmd {
-	//TODO: do not download file if it already exists. This overwrites the file
 	return func() tea.Msg {
 		dir := fmt.Sprintf("practice/concepts/%s", folder)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			return errorMsg{err}
+		}
+
+		_, err := os.Stat(fmt.Sprintf("practice/concepts/%s/%s", folder, fileName))
+
+		if os.IsExist(err) {
+			return fileDownloadedMsg{}
 		}
 
 		out, err := os.Create(fmt.Sprintf("practice/concepts/%s/%s", folder, fileName))
@@ -50,4 +57,40 @@ func downloadFile(folder, fileName string) tea.Cmd {
 
 		return fileDownloadedMsg{}
 	}
+}
+
+func parseTestOutput(output string) []testResult {
+	var results []testResult
+	lines := strings.Split(output, "\n")
+
+	var currentTest *testResult
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "=== RUN") {
+			testName := strings.TrimSpace(strings.TrimPrefix(line, "=== RUN"))
+			currentTest = &testResult{name: testName, passed: false}
+			results = append(results, *currentTest)
+		} else if strings.HasPrefix(line, "--- PASS") {
+			testName := strings.TrimSpace(strings.TrimPrefix(line, "--- PASS"))
+			for i := range results {
+				if results[i].name == testName {
+					results[i].passed = true
+					break
+				}
+			}
+		} else if strings.HasPrefix(line, "--- FAIL") {
+			testName := strings.TrimSpace(strings.TrimPrefix(line, "--- FAIL"))
+			for i := range results {
+				if results[i].name == testName {
+					results[i].passed = false
+					break
+				}
+			}
+		} else if currentTest != nil && !currentTest.passed {
+			// Append error message to the current test result
+			currentTest.errorMessage += line + "\n"
+		}
+	}
+
+	return results
 }
