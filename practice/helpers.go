@@ -1,6 +1,7 @@
 package practice
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -59,38 +60,40 @@ func downloadFile(folder, fileName string) tea.Cmd {
 	}
 }
 
+type testEvent struct {
+	Action  string `json:"Action"`
+	Package string `json:"Package"`
+	Test    string `json:"Test"`
+	Output  string `json:"Output"`
+}
+
 func parseTestOutput(output string) []testResult {
-	var results []testResult
-	lines := strings.Split(output, "\n")
+	decoder := json.NewDecoder(strings.NewReader(output))
+	resultsMap := make(map[string]testResult)
+	results := make([]testResult, 0)
 
-	var currentTest *testResult
+	for {
+		var t testEvent
 
-	for _, line := range lines {
-		if strings.HasPrefix(line, "=== RUN") {
-			testName := strings.TrimSpace(strings.TrimPrefix(line, "=== RUN"))
-			currentTest = &testResult{name: testName, passed: false}
-			results = append(results, *currentTest)
-		} else if strings.HasPrefix(line, "--- PASS") {
-			testName := strings.TrimSpace(strings.TrimPrefix(line, "--- PASS"))
-			for i := range results {
-				if results[i].name == testName {
-					results[i].passed = true
-					break
-				}
+		if err := decoder.Decode(&t); err != nil {
+			break
+		}
+
+		if t.Action == "run" && t.Test != "" {
+			resultsMap[t.Test] = testResult{name: t.Test, passed: false, errorMessage: ""}
+		} else if t.Action == "output" && t.Output != "" {
+			if entry, ok := resultsMap[t.Test]; ok {
+				entry.errorMessage += t.Output
+				resultsMap[t.Test] = entry
 			}
-		} else if strings.HasPrefix(line, "--- FAIL") {
-			testName := strings.TrimSpace(strings.TrimPrefix(line, "--- FAIL"))
-			for i := range results {
-				if results[i].name == testName {
-					results[i].passed = false
-					break
-				}
-			}
-		} else if currentTest != nil && !currentTest.passed {
-			// Append error message to the current test result
-			currentTest.errorMessage += line + "\n"
+
+		} else if t.Action == "pass" && t.Test != "" {
+			resultsMap[t.Test] = testResult{name: t.Test, passed: true, errorMessage: ""}
 		}
 	}
 
+	for _, result := range resultsMap {
+		results = append(results, result)
+	}
 	return results
 }

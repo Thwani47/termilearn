@@ -42,8 +42,8 @@ func (e errorMsg) Error() string {
 }
 
 type runTestsMsg struct {
-	tests []testResult
 	err   error
+	tests []testResult
 }
 
 func (r runTestsMsg) Error() string {
@@ -62,10 +62,10 @@ func (p practiceModel) Init() tea.Cmd {
 
 func (p practiceModel) View() string {
 
-	if p.err != nil {
-		return fmt.Sprintf("\n\n%s\n\n", errorStyle(p.err.Error()))
-	}
-
+	/*	if p.err != nil {
+			return fmt.Sprintf("\n%s\n\n", errorStyle(p.err.Error()))
+		}
+	*/
 	if p.isDownloadingFile {
 		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Setting up..."))
 	}
@@ -77,7 +77,7 @@ func (p practiceModel) View() string {
 			if test.passed {
 				resultView += fmt.Sprintf("✅ %s\n", test.name)
 			} else {
-				resultView += fmt.Sprintf("❌ %s\n%s\n", test.name, errorStyle(test.errorMessage))
+				resultView += fmt.Sprintf("❌ %s\n%s\n", test.name, test.errorMessage)
 			}
 
 		}
@@ -134,13 +134,12 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func testConcept(concept string) tea.Cmd {
 	// TODO: how can we capture the tests and show them as a list to the user (maybe show a checkmark next to the test that passed and a cross next to the test that failed)
 	return func() tea.Msg {
-		cmd := exec.Command("go", "test", fmt.Sprintf("practice/concepts/%s/%s_test.go", concept, concept))
+		cmd := exec.Command("go", "test", "-json", fmt.Sprintf("practice/concepts/%s/%s_test.go", concept, concept))
 
 		output, err := cmd.CombinedOutput()
 		if err != nil {
 			tests := parseTestOutput(string(output))
-			return runTestsMsg{tests: tests, err: fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
-			//		return errorMsg{fmt.Errorf(fmt.Sprint(err) + ": " + string(output))}
+			return runTestsMsg{tests: tests, err: fmt.Errorf(string(output))}
 		}
 
 		tests := parseTestOutput(string(output))
