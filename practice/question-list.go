@@ -77,7 +77,7 @@ func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
-	questions := []list.Item{ // these will need to be fetched somewhere
+	questions := []list.Item{ // TODO: these will need to be fetched somewhere
 		question{id: "1", title: "Question 1"},
 		question{id: "2", title: "Question 2"},
 		question{id: "3", title: "Question 3"},
@@ -86,7 +86,7 @@ func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandl
 	l := list.New(questions, questionDelegate{}, 0, 0)
 	l.SetShowStatusBar(false)
 	_, v := questionListStyle.GetFrameSize()
-	l.SetSize(w.Width, w.Height-v-2)
+	l.setSize(w.Width, w.Height-v-2)
 
 	m := questionList{
 		questions: l,
