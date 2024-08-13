@@ -15,8 +15,6 @@ const baseUrl = "https://raw.githubusercontent.com/Thwani47/termilearn-sourcefil
 
 type fileDownloadedMsg struct{}
 
-//type runTestsMsg struct{ message string }
-
 func getPracticeFiles(concept string) tea.Cmd {
 	practiceFileCmd := downloadFile(concept, "main.go")
 	testFileCmd := downloadFile(concept, fmt.Sprintf("%s_test.go", concept))

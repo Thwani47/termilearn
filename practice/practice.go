@@ -25,6 +25,7 @@ type practiceModel struct {
 	concept           string
 	err               error
 	quitting          bool
+	questions         tea.Model
 	help              help.Model
 	keys              keyMap
 	back              BackHandler
@@ -61,11 +62,6 @@ func (p practiceModel) Init() tea.Cmd {
 }
 
 func (p practiceModel) View() string {
-
-	/*	if p.err != nil {
-			return fmt.Sprintf("\n%s\n\n", errorStyle(p.err.Error()))
-		}
-	*/
 	if p.isDownloadingFile {
 		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Setting up..."))
 	}
@@ -87,7 +83,7 @@ func (p practiceModel) View() string {
 
 	helpView := p.help.View(p.keys)
 
-	return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Ready for practice..."), helpView)
+	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", spinnerTextStyle(p.questions.View()), helpView)
 
 }
 
@@ -164,6 +160,7 @@ func practiceConcept(concept string) tea.Cmd {
 
 func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
 
+	questions, _ := NewQuestionsList(concept, w, backhandler)
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = spinnerStyle
@@ -175,6 +172,7 @@ func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (
 		keys:              keys,
 		isDownloadingFile: true,
 		spinner:           s,
+		questions:         questions,
 	}
 
 	cmd := getPracticeFiles(concept)
