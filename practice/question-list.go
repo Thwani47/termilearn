@@ -86,7 +86,7 @@ func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandl
 	l := list.New(questions, questionDelegate{}, 0, 0)
 	l.SetShowStatusBar(false)
 	_, v := questionListStyle.GetFrameSize()
-	l.setSize(w.Width, w.Height-v-2)
+	l.SetSize(w.Width, w.Height-v-2)
 
 	m := questionList{
 		questions: l,
