@@ -16,14 +16,14 @@ var (
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 )
 
-type question struct {
-	id    string
-	title string
+type QuestionListItem struct {
+	title       string
+	description string
 }
 
-func (q question) Title() string       { return q.title }
-func (q question) Description() string { return q.title }
-func (q question) FilterValue() string { return q.title }
+func (q QuestionListItem) Title() string       { return q.title }
+func (q QuestionListItem) Description() string { return q.description }
+func (q QuestionListItem) FilterValue() string { return q.title }
 
 type questionDelegate struct{}
 
@@ -31,7 +31,7 @@ func (qd questionDelegate) Height() int                             { return 1 }
 func (qd questionDelegate) Spacing() int                            { return 0 }
 func (qd questionDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (qd questionDelegate) Render(w io.Writer, m list.Model, index int, item list.Item) {
-	i, ok := item.(question)
+	i, ok := item.(QuestionListItem)
 
 	if !ok {
 		return
@@ -51,7 +51,6 @@ func (qd questionDelegate) Render(w io.Writer, m list.Model, index int, item lis
 }
 
 type questionList struct {
-	concept   string
 	questions list.Model
 }
 
@@ -76,24 +75,29 @@ func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return q, cmd
 }
 
-func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
-	questions := []list.Item{ // TODO: these will need to be fetched somewhere
-		question{id: "1", title: "Question 1"},
-		question{id: "2", title: "Question 2"},
-		question{id: "3", title: "Question 3"},
+func NewQuestionsList(questions []QuestionWrapper, w tea.WindowSizeMsg, backhandler BackHandler) tea.Model {
+	items := make([]list.Item, len(questions))
+	for i, q := range questions {
+		var title, description string
+		switch q.QuestionType {
+		case "mcq":
+			title = q.MCQQuestion.QuestionType
+			description = q.MCQQuestion.QuestionText
+		case "edit":
+			title = q.EditQuestion.QuestionType
+			description = fmt.Sprintf("File: %s, TestFile: %s", q.EditQuestion.File, q.EditQuestion.TestFile)
+		}
+		items[i] = QuestionListItem{title: title, description: description}
+
 	}
 
-	l := list.New(questions, questionDelegate{}, 0, 0)
+	l := list.New(items, questionDelegate{}, 0, 0)
 	l.SetShowStatusBar(false)
 	_, v := questionListStyle.GetFrameSize()
 	l.SetSize(w.Width, w.Height-v-2)
 
 	m := questionList{
 		questions: l,
-		concept:   concept,
 	}
-
-	m.questions.Title = concept
-	cmd := tea.SetWindowTitle(concept)
-	return m, cmd
+	return m
 }

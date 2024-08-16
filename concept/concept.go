@@ -64,12 +64,12 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, m.keys.Practice):
-			return practice.NewQuestionsList(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-				return m.Update(msg)
-			})
-			/*	return practice.NewPractice(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+			/*return practice.NewQuestionsList(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 				return m.Update(msg)
 			})*/
+			return practice.NewPractice(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+				return m.Update(msg)
+			})
 		}
 	case tea.WindowSizeMsg:
 		m.w = msg

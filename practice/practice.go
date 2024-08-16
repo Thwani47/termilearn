@@ -25,7 +25,7 @@ type practiceModel struct {
 	concept           string
 	err               error
 	quitting          bool
-	questions         tea.Model
+	questionList      tea.Model
 	help              help.Model
 	keys              keyMap
 	back              BackHandler
@@ -83,7 +83,7 @@ func (p practiceModel) View() string {
 
 	helpView := p.help.View(p.keys)
 
-	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", spinnerTextStyle(p.questions.View()), helpView)
+	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", spinnerTextStyle(p.questionList.View()), helpView)
 
 }
 
@@ -111,6 +111,10 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return p, nil
 	case fileDownloadedMsg:
 		p.isDownloadingFile = false
+		p.questionList = NewQuestionsList(msg.questions, p.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+			return p.Update(msg)
+		})
+		p.err = msg.err
 		return p, nil
 	case runTestsMsg:
 		if msg.err != nil {
@@ -128,7 +132,6 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func testConcept(concept string) tea.Cmd {
-	// TODO: how can we capture the tests and show them as a list to the user (maybe show a checkmark next to the test that passed and a cross next to the test that failed)
 	return func() tea.Msg {
 		cmd := exec.Command("go", "test", "-json", fmt.Sprintf("practice/concepts/%s/%s_test.go", concept, concept))
 
@@ -159,8 +162,6 @@ func practiceConcept(concept string) tea.Cmd {
 }
 
 func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
-
-	questions, _ := NewQuestionsList(concept, w, backhandler)
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = spinnerStyle
@@ -172,7 +173,6 @@ func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (
 		keys:              keys,
 		isDownloadingFile: true,
 		spinner:           s,
-		questions:         questions,
 	}
 
 	cmd := getPracticeFiles(concept)

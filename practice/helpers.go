@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -13,7 +14,62 @@ import (
 
 const baseUrl = "https://raw.githubusercontent.com/Thwani47/termilearn-sourcefiles/master"
 
-type fileDownloadedMsg struct{}
+type Question struct {
+	Title        string `json:"title"`
+	QuestionType string `json:"questionType"`
+}
+
+type MCQQuestion struct {
+	Question
+	QuestionText string   `json:"question"`
+	Answers      []string `json:"answers"`
+	Answer       string   `json:"answer"`
+}
+
+type EditQuestion struct {
+	Question
+	File     string `json:"file"`
+	TestFile string `json:"testFile"`
+}
+
+type QuestionWrapper struct {
+	QuestionType string
+	MCQQuestion  *MCQQuestion
+	EditQuestion *EditQuestion
+}
+
+func (q *QuestionWrapper) UnmarshalJSON(data []byte) error {
+	var base Question
+
+	if err := json.Unmarshal(data, &base); err != nil {
+		return err
+	}
+
+	q.QuestionType = base.QuestionType
+	switch base.QuestionType {
+	case "mcq":
+		var mcq MCQQuestion
+		if err := json.Unmarshal(data, &mcq); err != nil {
+			return err
+		}
+		q.MCQQuestion = &mcq
+	case "edit":
+		var edit EditQuestion
+		if err := json.Unmarshal(data, &edit); err != nil {
+			return err
+		}
+		q.EditQuestion = &edit
+	default:
+		return fmt.Errorf("unknown question type: %s", base.QuestionType)
+	}
+
+	return nil
+}
+
+type fileDownloadedMsg struct {
+	questions []QuestionWrapper
+	err       error
+}
 
 func getPracticeFiles(concept string) tea.Cmd {
 	practiceFileCmd := downloadFile(concept, "main.go")
@@ -22,6 +78,7 @@ func getPracticeFiles(concept string) tea.Cmd {
 	return tea.Batch(practiceFileCmd, testFileCmd)
 }
 
+// TODO: I need to find a way to download an entire folder and not specify the file
 func downloadFile(folder, fileName string) tea.Cmd {
 	return func() tea.Msg {
 		dir := fmt.Sprintf("practice/concepts/%s", folder)
@@ -32,7 +89,12 @@ func downloadFile(folder, fileName string) tea.Cmd {
 		_, err := os.Stat(fmt.Sprintf("practice/concepts/%s/%s", folder, fileName))
 
 		if os.IsExist(err) {
-			return fileDownloadedMsg{}
+			questions, err := readQuestions(fmt.Sprintf("practice/concepts/%s", folder))
+			log.Printf("%v %v\n", questions, err)
+			return fileDownloadedMsg{
+				err:       err,
+				questions: questions,
+			}
 		}
 
 		out, err := os.Create(fmt.Sprintf("practice/concepts/%s/%s", folder, fileName))
@@ -54,8 +116,33 @@ func downloadFile(folder, fileName string) tea.Cmd {
 			return errorMsg{err}
 		}
 
-		return fileDownloadedMsg{}
+		questions, err := readQuestions(fmt.Sprintf("practice/concepts/%s", folder))
+		log.Printf("%v %v\n", questions, err)
+		return fileDownloadedMsg{
+			err:       err,
+			questions: questions,
+		}
+
 	}
+}
+
+func readQuestions(folder string) ([]QuestionWrapper, error) {
+	content, err := os.ReadFile(fmt.Sprintf("%s/questions.json", folder))
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to open question files: %v", err)
+	}
+
+	var questions []QuestionWrapper
+
+	if err = json.Unmarshal(content, &questions); err != nil {
+		return nil, fmt.Errorf("error parsing JSON: %v", err)
+	}
+
+	log.Println("questions ", questions)
+
+	return questions, nil
+
 }
 
 type testEvent struct {
