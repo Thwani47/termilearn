@@ -5,20 +5,13 @@ import (
 	"io"
 	"strings"
 
+	"github.com/Thwani47/termilearn/common/keys"
+	"github.com/Thwani47/termilearn/common/styles"
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-var (
-	questionListStyle = lipgloss.NewStyle().Margin(1, 2)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	spinnerStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
-	spinnerTextStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
-	errorStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render
-
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
 )
 
 type QuestionListItem struct {
@@ -34,6 +27,8 @@ type questionList struct {
 	concept                string
 	spinner                spinner.Model
 	w                      tea.WindowSizeMsg
+	keys                   keys.QuestionListKeyMap
+	help                   help.Model
 	back                   BackHandler
 }
 
@@ -54,18 +49,20 @@ func (qd questionDelegate) Render(w io.Writer, m list.Model, index int, item lis
 
 	str := fmt.Sprintf("%d. %s", index+1, i.title)
 
-	fn := itemStyle.Render
+	fn := styles.ItemStyle.Render
 
 	if index == m.Index() {
 		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
+			return styles.SelectedItemStyle.Render("> " + strings.Join(s, " "))
 		}
 	}
 
 	fmt.Fprint(w, fn(str))
 }
 
-func (q questionList) Init() tea.Cmd { return nil }
+func (q questionList) Init() tea.Cmd {
+	return tea.Batch(q.spinner.Tick, getPracticeFiles(q.concept))
+}
 
 func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -78,31 +75,37 @@ func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		q.isDownloadingQuestions = false
 		q.questionsList = msg.questions
 		q.err = msg.err
-
+		q.createListView(q.questionsList)
 	case tea.KeyMsg:
-		if msg.String() == "q" {
+		switch {
+		case key.Matches(msg, q.keys.Quit):
 			return q, tea.Quit
+		case key.Matches(msg, q.keys.Back):
+			return q.back(q.w)
+		case key.Matches(msg, q.keys.Help):
+			q.help.ShowAll = !q.help.ShowAll
 		}
 	}
 
-	return q, q.spinner.Tick
+	var cmd tea.Cmd
+	q.questions, cmd = q.questions.Update(msg)
+	return q, cmd
 }
 
 func (q questionList) View() string {
 	if q.isDownloadingQuestions {
-		return fmt.Sprintf("\n%s %s\n\n", q.spinner.View(), spinnerTextStyle("Setting up..."))
+		return fmt.Sprintf("\n%s %s\n\n", q.spinner.View(), styles.SpinnerTextStyle("Setting up..."))
 	}
 
 	if q.err != nil {
-		return errorStyle(fmt.Sprintf("\n\n%s\n\n", q.err.Error()))
+		return styles.ErrorStyle(fmt.Sprintf("\n\n%s\n\n", q.err.Error()))
 	}
 
 	if q.questionsList != nil {
-		q.createListView(q.questionsList)
-		return questionListStyle.Render(q.questions.View())
+		return styles.DocStyle.Render(q.questions.View())
 	}
 
-	return errorStyle(fmt.Sprintf("\n\nNo questions found for concept: %s\n\n", q.concept))
+	return styles.ErrorStyle(fmt.Sprintf("\n\nNo questions found for concept: %s\n\n", q.concept))
 }
 
 func (q *questionList) createListView(questions []QuestionWrapper) {
@@ -120,26 +123,30 @@ func (q *questionList) createListView(questions []QuestionWrapper) {
 		items[i] = QuestionListItem{title: title, description: description}
 	}
 
-	l := list.New(items, questionDelegate{}, 0, 0)
-	l.SetShowStatusBar(false)
-	l.Title = q.concept
-	_, v := questionListStyle.GetFrameSize()
-	l.SetSize(q.w.Width, q.w.Height-v-2)
-	q.questions = l
+	q.questions.SetItems(items)
 }
 
 func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
 	s := spinner.New()
 	s.Spinner = spinner.Points
-	s.Style = spinnerStyle
+	s.Style = styles.SpinnerStyle
+
+	l := list.New([]list.Item{}, questionDelegate{}, w.Width, w.Height)
+	l.SetShowStatusBar(false)
+	_, v := styles.DocStyle.GetFrameSize()
+	l.SetSize(w.Width, w.Height-v-2)
+	l.Title = concept
+
 	m := questionList{
 		concept:                concept,
 		w:                      w,
 		back:                   backhandler,
 		isDownloadingQuestions: true,
+		help:                   help.New(),
+		keys:                   keys.QuestionListKeys,
 		spinner:                s,
+		questions:              l,
 	}
 
-	cmd := getPracticeFiles(concept)
-	return m, cmd
+	return m, tea.Batch(m.spinner.Tick, getPracticeFiles(concept))
 }

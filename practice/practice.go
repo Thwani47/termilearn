@@ -5,26 +5,24 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/Thwani47/termilearn/common/keys"
+	"github.com/Thwani47/termilearn/common/styles"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
 
 type practiceModel struct {
-	concept           string
-	err               error
-	quitting          bool
-	questionList      tea.Model
-	help              help.Model
-	keys              keyMap
-	back              BackHandler
-	w                 tea.WindowSizeMsg
-	isDownloadingFile bool
-	spinner           spinner.Model
-	tests             []testResult
+	concept  string
+	err      error
+	quitting bool
+	help     help.Model
+	keys     keys.PracticeKeyMap
+	back     BackHandler
+	w        tea.WindowSizeMsg
+	tests    []testResult
 }
 
 type doneEditingMsg struct{ err error }
@@ -50,7 +48,7 @@ type testResult struct {
 }
 
 func (p practiceModel) Init() tea.Cmd {
-	return p.spinner.Tick
+	return nil
 }
 
 func (p practiceModel) View() string {
@@ -65,13 +63,13 @@ func (p practiceModel) View() string {
 			}
 
 		}
-		return fmt.Sprintf("\n%s\n\n%s\n\n", spinnerTextStyle("Tests results: "), resultView)
+		return fmt.Sprintf("\n%s\n\n%s\n\n", styles.SpinnerTextStyle("Tests results: "), resultView)
 
 	}
 
 	helpView := p.help.View(p.keys)
 
-	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", spinnerTextStyle(p.questionList.View()), helpView)
+	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", styles.SpinnerTextStyle("practice..."), helpView)
 
 }
 
@@ -95,14 +93,6 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		p.w = msg
 	case errorMsg:
 		p.err = msg.err
-		p.isDownloadingFile = false
-		return p, nil
-	case fileDownloadedMsg:
-		p.isDownloadingFile = false
-		// p.questionList = NewQuestionsList(msg.questions, p.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-		// 	return p.Update(msg)
-		// })
-		p.err = msg.err
 		return p, nil
 	case runTestsMsg:
 		if msg.err != nil {
@@ -110,13 +100,10 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		p.tests = msg.tests
 		return p, nil
-	case spinner.TickMsg:
-		var cmd tea.Cmd
-		p.spinner, cmd = p.spinner.Update(msg)
-		return p, cmd
+
 	}
 
-	return p, p.spinner.Tick
+	return p, nil
 }
 
 func testConcept(concept string) tea.Cmd {
@@ -150,17 +137,12 @@ func practiceConcept(concept string) tea.Cmd {
 }
 
 func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
-	s := spinner.New()
-	s.Spinner = spinner.Points
-	s.Style = spinnerStyle
 	p := practiceModel{
-		concept:           concept,
-		back:              backhandler,
-		w:                 w,
-		help:              help.New(),
-		keys:              keys,
-		isDownloadingFile: true,
-		spinner:           s,
+		concept: concept,
+		back:    backhandler,
+		w:       w,
+		help:    help.New(),
+		keys:    keys.PracticeKeys,
 	}
 
 	cmd := tea.SetWindowTitle(fmt.Sprintf("Practice: %s", concept))

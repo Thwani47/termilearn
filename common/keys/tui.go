@@ -1,8 +1,8 @@
-package tui
+package keys
 
 import "github.com/charmbracelet/bubbles/key"
 
-type tabsKeyMap struct {
+type TabsKeyMap struct {
 	Help   key.Binding
 	Next   key.Binding
 	Prev   key.Binding
@@ -10,18 +10,18 @@ type tabsKeyMap struct {
 	Select key.Binding
 }
 
-func (k tabsKeyMap) ShortHelp() []key.Binding {
+func (k TabsKeyMap) ShortHelp() []key.Binding {
 	return []key.Binding{k.Select, k.Next, k.Prev, k.Quit, k.Help}
 }
 
-func (k tabsKeyMap) FullHelp() [][]key.Binding {
+func (k TabsKeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Select, k.Next, k.Prev},
 		{k.Quit, k.Help},
 	}
 }
 
-var tabKeys = tabsKeyMap{
+var TabKeys = TabsKeyMap{
 	Help:   key.NewBinding(key.WithKeys("?", "h"), key.WithHelp("?/h", "toggle help")),
 	Quit:   key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit the application")),
 	Next:   key.NewBinding(key.WithKeys("right", "n", "tab"), key.WithHelp("tab/n", "move to the next tab")),
@@ -29,13 +29,13 @@ var tabKeys = tabsKeyMap{
 	Select: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "selected current tab")),
 }
 
-type conceptListKeyMap struct {
+type ConceptListKeyMap struct {
 	Choose key.Binding
 	Back   key.Binding
 	Quit   key.Binding
 }
 
-var conceptListKeys = conceptListKeyMap{
+var ConceptListKeys = ConceptListKeyMap{
 	Choose: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "select concept")),
 	Back:   key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "go back")),
 }

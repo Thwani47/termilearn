@@ -5,20 +5,16 @@ import (
 	"io"
 	"strings"
 
+	"github.com/Thwani47/termilearn/common/keys"
+	"github.com/Thwani47/termilearn/common/styles"
 	"github.com/Thwani47/termilearn/practice"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 var (
-	docStyle          = lipgloss.NewStyle().Margin(1, 2)
-	titleStyle        = lipgloss.NewStyle().MarginLeft(2).Bold(true).Foreground(lipgloss.Color("#FFFDF5")).Background(lipgloss.Color("#25A065")).Padding(0, 1)
-	itemStyle         = lipgloss.NewStyle().PaddingLeft(4)
-	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(2).Foreground(lipgloss.Color("170"))
-	paginationStyle   = list.DefaultStyles().PaginationStyle.PaddingLeft(4)
-	concepts          = []list.Item{
+	concepts = []list.Item{
 		listItem{id: "hello-world", title: "Hello World", description: "Learn how to print the classical 'Hello World' message in Go"},
 		listItem{id: "values", title: "Values", description: "Learn about the basic types in Go"},
 		listItem{id: "variables", title: "Variables", description: "Learn how to declare and initialize variables in Go"},
@@ -28,11 +24,6 @@ var (
 		listItem{id: "switch", title: "Switch", description: "Learn how to use switch statements in Go"},
 	}
 )
-
-type conceptSelectedMessage struct {
-	id     string
-	choice string
-}
 
 type listItem struct {
 	id          string
@@ -54,7 +45,7 @@ func (li listItem) FilterValue() string {
 
 type conceptListModel struct {
 	list        list.Model
-	keys        conceptListKeyMap
+	keys        keys.ConceptListKeyMap
 	backHandler BackHandler
 	w           tea.WindowSizeMsg
 }
@@ -77,10 +68,10 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, item list.Ite
 
 	str := fmt.Sprintf("%d. %s", index+1, i.title)
 
-	fn := itemStyle.Render
+	fn := styles.ItemStyle.Render
 	if index == m.Index() {
 		fn = func(s ...string) string {
-			return selectedItemStyle.Render("> " + strings.Join(s, " "))
+			return styles.SelectedItemStyle.Render("> " + strings.Join(s, " "))
 		}
 	}
 
@@ -104,15 +95,12 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return practice.NewQuestionsList(i.id, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 					return m.Update(msg)
 				})
-				// return concept.NewConcept(i.id, i.title, m.w.Width, m.w.Height, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-				// 	return m.Update(msg)
-				// })
 			}
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.w = msg
-		h, v := docStyle.GetFrameSize()
+		h, v := styles.DocStyle.GetFrameSize()
 		availableHeight := msg.Height - v - 2
 		m.list.SetSize(msg.Width-h, availableHeight)
 	}
@@ -122,24 +110,25 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m conceptListModel) View() string {
-	return docStyle.Render(m.list.View())
+	return styles.DocStyle.Render(m.list.View())
 }
 
 func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
+	keys := keys.ConceptListKeys
 	l := list.New(concepts, itemDelegate{}, 0, 0)
 
 	l.Title = "Select Go Concept"
-	l.Styles.Title = titleStyle
-	l.Styles.PaginationStyle = paginationStyle
+	l.Styles.Title = styles.TitleStyle
+	l.Styles.PaginationStyle = styles.PaginationStyle
 	l.SetShowStatusBar(false)
-	_, v := docStyle.GetFrameSize()
+	_, v := styles.DocStyle.GetFrameSize()
 	availableHeight := height - v - 2
 	l.SetSize(width, availableHeight)
 	l.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{conceptListKeys.Choose}
+		return []key.Binding{keys.Choose}
 	}
 	l.AdditionalShortHelpKeys = func() []key.Binding {
-		return []key.Binding{conceptListKeys.Choose}
+		return []key.Binding{keys.Choose}
 	}
 
 	cmd := l.NewStatusMessage("")
@@ -150,7 +139,7 @@ func NewConceptList(width int, height int, backHandler BackHandler) (tea.Model, 
 			Width:  width,
 			Height: height,
 		},
-		keys:        conceptListKeys,
+		keys:        keys,
 		backHandler: backHandler,
 	}
 

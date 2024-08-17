@@ -4,28 +4,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Thwani47/termilearn/common/keys"
+	"github.com/Thwani47/termilearn/common/styles"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	inactiveTabBorder = tabBorderWithBottom("┴", "─", "┴")
-	activeTabBorder   = tabBorderWithBottom("┘", " ", "└")
-	tabDocStyle       = lipgloss.NewStyle().Padding(1, 2, 1, 2)
-	highlightColor    = lipgloss.AdaptiveColor{Light: "#874BFD", Dark: "#7D56F4"}
-	inactiveTabStyle  = lipgloss.NewStyle().Border(inactiveTabBorder, true).BorderForeground(highlightColor).Padding(0, 1)
-	activeTabStyle    = inactiveTabStyle.Border(activeTabBorder, true)
-	windowStyle       = lipgloss.NewStyle().BorderForeground(highlightColor).Padding(2, 0).Align(lipgloss.Center).Border(lipgloss.NormalBorder()).UnsetBorderTop()
-	helpHeight        = 6
-)
-
 type mainModel struct {
 	activeTab int
 	width     int
 	height    int
-	keys      tabsKeyMap
+	keys      keys.TabsKeyMap
 	help      help.Model
 	tabs      []Tab
 }
@@ -88,9 +79,9 @@ func (m mainModel) View() string {
 		isFirst, isLast, isActive := i == 0, i == len(m.tabs)-1, i == m.activeTab
 
 		if isActive {
-			style = activeTabStyle
+			style = styles.ActiveTabStyle
 		} else {
-			style = inactiveTabStyle
+			style = styles.InactiveTabStyle
 		}
 
 		border, _, _, _, _ := style.GetBorder()
@@ -111,10 +102,10 @@ func (m mainModel) View() string {
 	doc.WriteString(row)
 	doc.WriteString("\n")
 
-	doc.WriteString(windowStyle.Width((lipgloss.Width(row) - windowStyle.GetHorizontalFrameSize())).Render(m.tabs[m.activeTab].content))
+	doc.WriteString(styles.WindowStyle.Width((lipgloss.Width(row) - styles.WindowStyle.GetHorizontalFrameSize())).Render(m.tabs[m.activeTab].content))
 	helpView := m.help.View(m.keys)
 	doc.WriteString(fmt.Sprintf("\n%s", helpView))
-	return tabDocStyle.Render(doc.String())
+	return styles.TabDocStyle.Render(doc.String())
 
 }
 
@@ -128,6 +119,6 @@ func NewMainModel() mainModel {
 	return mainModel{
 		tabs: tabs,
 		help: help.New(),
-		keys: tabKeys,
+		keys: keys.TabKeys,
 	}
 }

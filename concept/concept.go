@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Thwani47/termilearn/common/styles"
 	"github.com/Thwani47/termilearn/practice"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -16,23 +17,7 @@ type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
 
 const userHighPerformanceRender = false
 
-var (
-	viewPortTitleStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
-		b.Right = "├"
-		return lipgloss.NewStyle().BorderStyle(b).Padding(0, 1)
-	}()
-
-	titleStyle = lipgloss.NewStyle().MarginLeft(2).Bold(true).Foreground(lipgloss.Color("#FFFDF5")).Background(lipgloss.Color("#25A065")).Padding(0, 1)
-
-	viewPortInfoStyle = func() lipgloss.Style {
-		b := lipgloss.RoundedBorder()
-		b.Left = "┤"
-		return titleStyle.BorderStyle(b)
-	}()
-
-	helpHeight = 6
-)
+var helpHeight = 6
 
 type conceptModel struct {
 	help      help.Model
@@ -64,9 +49,6 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, m.keys.Practice):
-			/*return practice.NewQuestionsList(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-				return m.Update(msg)
-			})*/
 			return practice.NewPractice(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 				return m.Update(msg)
 			})
@@ -98,14 +80,14 @@ func (m conceptModel) View() string {
 }
 
 func (m conceptModel) headerView() string {
-	title := viewPortTitleStyle.Render(m.title)
+	title := styles.ViewPortTitleStyle.Render(m.title)
 	line := strings.Repeat("-", max(0, m.viewport.Width-lipgloss.Height(title)))
 
 	return lipgloss.JoinHorizontal(lipgloss.Center, title, line)
 }
 
 func (m conceptModel) footerView() string {
-	info := viewPortInfoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
+	info := styles.ViewPortInfoStyle.Render(fmt.Sprintf("%3.f%%", m.viewport.ScrollPercent()*100))
 	line := strings.Repeat("─", max(0, m.viewport.Width-lipgloss.Width(info)))
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
@@ -113,8 +95,8 @@ func (m conceptModel) footerView() string {
 func NewConcept(id, title string, width, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
 	// read notes
 	content := readNotes(id)
-	headerHeight := lipgloss.Height(viewPortTitleStyle.Render(title))
-	footerHeight := lipgloss.Height(viewPortInfoStyle.Render(""))
+	headerHeight := lipgloss.Height(styles.ViewPortTitleStyle.Render(title))
+	footerHeight := lipgloss.Height(styles.ViewPortInfoStyle.Render(""))
 
 	verticalMarginHeight := headerHeight + footerHeight
 	availableHeight := height - verticalMarginHeight - helpHeight
