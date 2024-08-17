@@ -9,14 +9,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
-)
-
-var (
-	spinnerTextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render
-	spinnerStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("69"))
-	errorStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("9")).Render
-	helpHeight       = 6
 )
 
 type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
@@ -62,10 +54,6 @@ func (p practiceModel) Init() tea.Cmd {
 }
 
 func (p practiceModel) View() string {
-	if p.isDownloadingFile {
-		return fmt.Sprintf("\n%s %s\n\n", p.spinner.View(), spinnerTextStyle("Setting up..."))
-	}
-
 	if len(p.tests) > 0 {
 		var resultView string
 
@@ -111,9 +99,9 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return p, nil
 	case fileDownloadedMsg:
 		p.isDownloadingFile = false
-		p.questionList = NewQuestionsList(msg.questions, p.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
-			return p.Update(msg)
-		})
+		// p.questionList = NewQuestionsList(msg.questions, p.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+		// 	return p.Update(msg)
+		// })
 		p.err = msg.err
 		return p, nil
 	case runTestsMsg:
@@ -175,8 +163,6 @@ func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (
 		spinner:           s,
 	}
 
-	cmd := getPracticeFiles(concept)
-
-	_ = tea.SetWindowTitle(fmt.Sprintf("Practice: %s", concept))
+	cmd := tea.SetWindowTitle(fmt.Sprintf("Practice: %s", concept))
 	return p, cmd
 }
