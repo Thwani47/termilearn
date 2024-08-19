@@ -49,7 +49,7 @@ func (m conceptModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Help):
 			m.help.ShowAll = !m.help.ShowAll
 		case key.Matches(msg, m.keys.Practice):
-			return practice.NewPractice(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+			return practice.NewQuestionsList(m.conceptId, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 				return m.Update(msg)
 			})
 		}
@@ -92,16 +92,16 @@ func (m conceptModel) footerView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, line, info)
 }
 
-func NewConcept(id, title string, width, height int, backHandler BackHandler) (tea.Model, tea.Cmd) {
+func NewConcept(id, title string, w tea.WindowSizeMsg, backHandler BackHandler) (tea.Model, tea.Cmd) {
 	// read notes
 	content := readNotes(id)
 	headerHeight := lipgloss.Height(styles.ViewPortTitleStyle.Render(title))
 	footerHeight := lipgloss.Height(styles.ViewPortInfoStyle.Render(""))
 
 	verticalMarginHeight := headerHeight + footerHeight
-	availableHeight := height - verticalMarginHeight - helpHeight
+	availableHeight := w.Height - verticalMarginHeight - helpHeight
 
-	vp := viewport.New(width, availableHeight)
+	vp := viewport.New(w.Width, availableHeight)
 	vp.YPosition = headerHeight
 	vp.HighPerformanceRendering = userHighPerformanceRender
 	vp.SetContent(content)
@@ -111,12 +111,9 @@ func NewConcept(id, title string, width, height int, backHandler BackHandler) (t
 		title:     title,
 		help:      help.New(),
 		keys:      viewportKeys,
-		w: tea.WindowSizeMsg{
-			Width:  width,
-			Height: height,
-		},
-		viewport: vp,
-		back:     backHandler,
+		w:         w,
+		viewport:  vp,
+		back:      backHandler,
 	}
 
 	cmd := tea.SetWindowTitle(title)

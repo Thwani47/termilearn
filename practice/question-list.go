@@ -15,6 +15,7 @@ import (
 )
 
 type QuestionListItem struct {
+	index       int
 	title       string
 	description string
 }
@@ -77,6 +78,9 @@ func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		q.err = msg.err
 		q.createListView(q.questionsList)
 	case tea.KeyMsg:
+		if q.questions.FilterState() == list.Filtering {
+			break
+		}
 		switch {
 		case key.Matches(msg, q.keys.Quit):
 			return q, tea.Quit
@@ -84,6 +88,17 @@ func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return q.back(q.w)
 		case key.Matches(msg, q.keys.Help):
 			q.help.ShowAll = !q.help.ShowAll
+		case key.Matches(msg, q.keys.Practice):
+			i, ok := q.questions.SelectedItem().(QuestionListItem)
+
+			if ok {
+				selectedQuestion := q.questionsList[i.index]
+				return NewPractice(selectedQuestion, q.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+					return q.Update(msg)
+				})
+			}
+
+			return q, nil
 		}
 	}
 
@@ -102,7 +117,7 @@ func (q questionList) View() string {
 	}
 
 	if q.questionsList != nil {
-		return styles.DocStyle.Render(q.questions.View())
+		return styles.DocStyle.Render(fmt.Sprintf("%s\n\n", q.questions.View()))
 	}
 
 	return styles.ErrorStyle(fmt.Sprintf("\n\nNo questions found for concept: %s\n\n", q.concept))
@@ -120,13 +135,14 @@ func (q *questionList) createListView(questions []QuestionWrapper) {
 			title = q.EditQuestion.Title
 			description = fmt.Sprintf("File: %s, TestFile: %s", q.EditQuestion.File, q.EditQuestion.TestFile)
 		}
-		items[i] = QuestionListItem{title: title, description: description}
+		items[i] = QuestionListItem{index: i, title: title, description: description}
 	}
 
 	q.questions.SetItems(items)
 }
 
 func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
+	keys := keys.QuestionListKeys
 	s := spinner.New()
 	s.Spinner = spinner.Points
 	s.Style = styles.SpinnerStyle
@@ -135,6 +151,12 @@ func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandl
 	l.SetShowStatusBar(false)
 	_, v := styles.DocStyle.GetFrameSize()
 	l.SetSize(w.Width, w.Height-v-2)
+	l.AdditionalFullHelpKeys = func() []key.Binding {
+		return []key.Binding{keys.Practice}
+	}
+	l.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{keys.Practice}
+	}
 	l.Title = concept
 
 	m := questionList{
@@ -143,7 +165,7 @@ func NewQuestionsList(concept string, w tea.WindowSizeMsg, backhandler BackHandl
 		back:                   backhandler,
 		isDownloadingQuestions: true,
 		help:                   help.New(),
-		keys:                   keys.QuestionListKeys,
+		keys:                   keys,
 		spinner:                s,
 		questions:              l,
 	}

@@ -7,7 +7,7 @@ import (
 
 	"github.com/Thwani47/termilearn/common/keys"
 	"github.com/Thwani47/termilearn/common/styles"
-	"github.com/Thwani47/termilearn/practice"
+	"github.com/Thwani47/termilearn/concept"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -92,7 +92,7 @@ func (m conceptListModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.keys.Choose):
 			i, ok := m.list.SelectedItem().(listItem)
 			if ok {
-				return practice.NewQuestionsList(i.id, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+				return concept.NewConcept(i.id, i.title, m.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 					return m.Update(msg)
 				})
 			}

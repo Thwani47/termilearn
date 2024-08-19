@@ -15,7 +15,7 @@ import (
 type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
 
 type practiceModel struct {
-	concept  string
+	question QuestionWrapper
 	err      error
 	quitting bool
 	help     help.Model
@@ -84,10 +84,10 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p.back(p.w)
 		case key.Matches(msg, p.keys.Help):
 			p.help.ShowAll = !p.help.ShowAll
-		case key.Matches(msg, p.keys.Open):
-			return p, practiceConcept(p.concept)
-		case key.Matches(msg, p.keys.Test):
-			return p, testConcept(p.concept)
+			// case key.Matches(msg, p.keys.Open):
+			// 	return p, practiceConcept(p.concept)
+			// case key.Matches(msg, p.keys.Test):
+			// 	return p, testConcept(p.concept)
 		}
 	case tea.WindowSizeMsg:
 		p.w = msg
@@ -136,15 +136,23 @@ func practiceConcept(concept string) tea.Cmd {
 	})
 }
 
-func NewPractice(concept string, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
+func NewPractice(question QuestionWrapper, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
 	p := practiceModel{
-		concept: concept,
-		back:    backhandler,
-		w:       w,
-		help:    help.New(),
-		keys:    keys.PracticeKeys,
+		question: question,
+		back:     backhandler,
+		w:        w,
+		help:     help.New(),
+		keys:     keys.PracticeKeys,
 	}
 
-	cmd := tea.SetWindowTitle(fmt.Sprintf("Practice: %s", concept))
+	var title string
+
+	if question.QuestionType == "mcq" {
+		title = question.MCQQuestion.Title
+	} else {
+		title = question.EditQuestion.Title
+	}
+
+	cmd := tea.SetWindowTitle(fmt.Sprintf("Practice: %s", title))
 	return p, cmd
 }

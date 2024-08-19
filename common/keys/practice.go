@@ -51,5 +51,5 @@ var QuestionListKeys = QuestionListKeyMap{
 	Help:     key.NewBinding(key.WithKeys("?", "h"), key.WithHelp("?/h", "toggle help")),
 	Quit:     key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit the application")),
 	Back:     key.NewBinding(key.WithKeys("b"), key.WithHelp("b", "go back")),
-	Practice: key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "start practicing question")),
+	Practice: key.NewBinding(key.WithKeys("enter"), key.WithHelp("enter", "open question")),
 }
