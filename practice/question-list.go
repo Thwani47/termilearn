@@ -93,7 +93,7 @@ func (q questionList) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			if ok {
 				selectedQuestion := q.questionsList[i.index]
-				return NewPractice(selectedQuestion, q.w, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+				return NewPractice(selectedQuestion, q.w, q.concept, func(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 					return q.Update(msg)
 				})
 			}

@@ -16,6 +16,7 @@ type BackHandler func(tea.WindowSizeMsg) (tea.Model, tea.Cmd)
 
 type practiceModel struct {
 	question QuestionWrapper
+	concept  string
 	err      error
 	quitting bool
 	help     help.Model
@@ -52,6 +53,7 @@ func (p practiceModel) Init() tea.Cmd {
 }
 
 func (p practiceModel) View() string {
+	helpView := p.help.View(p.keys)
 	if len(p.tests) > 0 {
 		var resultView string
 
@@ -63,13 +65,15 @@ func (p practiceModel) View() string {
 			}
 
 		}
-		return fmt.Sprintf("\n%s\n\n%s\n\n", styles.SpinnerTextStyle("Tests results: "), resultView)
+		return fmt.Sprintf("\n%s\n\n%s\n\n%s\n\n", styles.SpinnerTextStyle("Tests results: "), resultView, helpView)
 
 	}
 
-	helpView := p.help.View(p.keys)
+	if p.question.QuestionType == "mcq" {
+		return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", styles.SpinnerTextStyle("practice mcq..."), helpView)
+	}
 
-	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", styles.SpinnerTextStyle("practice..."), helpView)
+	return fmt.Sprintf("\n%s\n\n\n\n%s\n\n", styles.SpinnerTextStyle("practice edit question..."), helpView)
 
 }
 
@@ -84,10 +88,10 @@ func (p practiceModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return p.back(p.w)
 		case key.Matches(msg, p.keys.Help):
 			p.help.ShowAll = !p.help.ShowAll
-			// case key.Matches(msg, p.keys.Open):
-			// 	return p, practiceConcept(p.concept)
-			// case key.Matches(msg, p.keys.Test):
-			// 	return p, testConcept(p.concept)
+		case key.Matches(msg, p.keys.Open):
+			return p, practiceConcept(p.concept)
+		case key.Matches(msg, p.keys.Test):
+			return p, testConcept(p.concept)
 		}
 	case tea.WindowSizeMsg:
 		p.w = msg
@@ -136,9 +140,22 @@ func practiceConcept(concept string) tea.Cmd {
 	})
 }
 
-func NewPractice(question QuestionWrapper, w tea.WindowSizeMsg, backhandler BackHandler) (tea.Model, tea.Cmd) {
+func NewPractice(question QuestionWrapper, w tea.WindowSizeMsg, concept string, backhandler BackHandler) (tea.Model, tea.Cmd) {
+
+	if question.QuestionType == "edit" {
+		return practiceModel{
+			question: question,
+			concept:  concept,
+			back:     backhandler,
+			w:        w,
+			help:     help.New(),
+			keys:     keys.PracticeKeys,
+		}, practiceConcept(concept)
+	}
+
 	p := practiceModel{
 		question: question,
+		concept:  concept,
 		back:     backhandler,
 		w:        w,
 		help:     help.New(),
